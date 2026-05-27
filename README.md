@@ -1,6 +1,6 @@
 # XTM Docker Deployment
 
-Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti) and [OpenAEV](https://github.com/OpenAEV-Platform/openaev) into a unified threat intelligence and adversary emulation platform.
+Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev) and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
 
 ## Overview
 
@@ -8,9 +8,10 @@ This repository provides a complete Docker Compose setup for running:
 
 - **OpenCTI** — Open Cyber Threat Intelligence Platform
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
+- **XTM One** — AI copilot connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ
-- **Platform-specific** — Redis (OpenCTI), PostgreSQL (OpenAEV)
+- **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ, Redis
+- **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
 
 ## Prerequisites
 
@@ -116,7 +117,9 @@ IMAP_SSL_ENABLE=true
 IMAP_STARTTLS_ENABLE=false
 ```
 
-> **Tip:** Generate UUIDs using `uuidgen` or online tools like [uuidgenerator.net](https://www.uuidgenerator.net/)
+> **Tip:** Generate UUIDs using `uuidgen`. Long secrets (e.g. `SECRET_KEY`, `OPENCTI_ENCRYPTION_KEY`) should be 32-byte base64 strings produced with `openssl rand -base64 32`, **not** UUIDs.
+>
+> The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
 
 ### 3. Start the stack
 
@@ -130,6 +133,7 @@ Once all services are healthy (this may take a few minutes on first start):
 
 - **OpenCTI**: http://localhost:8080
 - **OpenAEV**: http://localhost:8081
+- **XTM One**: http://localhost:4000
 - **RabbitMQ Management**: http://localhost:15672
 
 ## Included Components
