@@ -534,7 +534,7 @@ services:
   ###########################
 
   xtm-one:
-    image: xtmone/platform:${XTM_ONE_VERSION:-rolling}
+    image: xtmone/platform:latest
     environment:
       - PLATFORM_MODE=xtm_one
       - PLATFORM_REGISTRATION_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
@@ -574,7 +574,7 @@ services:
       start_period: 60s
 
   xtm-one-worker:
-    image: xtmone/worker:${XTM_ONE_VERSION:-rolling}
+    image: xtmone/worker:latest
     environment:
       - PLATFORM_MODE=xtm_one
       - PLATFORM_REGISTRATION_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
