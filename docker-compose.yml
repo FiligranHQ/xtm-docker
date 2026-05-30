@@ -72,19 +72,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  pgsql-copilot:
+  pgsql-xtm-one:
     # Dedicated pgvector-enabled instance for XTM One (kept separate from
     # the OpenAEV pg cluster to isolate data and migrations).
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${XTM_ONE_POSTGRES_PASSWORD}
-      POSTGRES_DB: copilot
+      POSTGRES_DB: xtm_one
     volumes:
-      - pgsqlcopilotdata:/var/lib/postgresql/data
+      - pgsqlxtmonedata:/var/lib/postgresql/data
     restart: always
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${XTM_ONE_POSTGRES_USER}", "-d", "copilot" ]
+      test: [ "CMD", "pg_isready", "-U", "${XTM_ONE_POSTGRES_USER}", "-d", "xtm_one" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -167,7 +167,7 @@ services:
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
-      - APP__BASE_URL=http://opencti:8080
+      - APP__BASE_URL=${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}
       - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL}
       - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD}
       - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -385,7 +385,7 @@ services:
   openaev:
     image: openaev/platform:latest
     environment:
-      - OPENAEV_BASE-URL=http://openaev:8080
+      - OPENAEV_BASE-URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
       - OPENAEV_AUTH-LOCAL-ENABLE=true
       - OPENAEV_ADMIN_EMAIL=${OPENAEV_ADMIN_EMAIL}
       - OPENAEV_ADMIN_PASSWORD=${OPENAEV_ADMIN_PASSWORD}
@@ -535,24 +535,21 @@ services:
   ###########################
 
   xtm-one:
-    build:
-      context: ../xtm-one
-      dockerfile: Dockerfile
     image: filigran/xtm-one:${XTM_ONE_VERSION:-rolling}
     environment:
       - PLATFORM_MODE=xtm_one
       - PLATFORM_REGISTRATION_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
-      - BASE_URL=http://xtm-one:4000
+      - BASE_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
       - FRONTEND_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
       - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
       - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
       - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-copilot:5432/copilot
+      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-xtm-one:5432/xtm_one
       - REDIS_URL=redis://redis:6379
       - S3_ENDPOINT=minio:9000
       - S3_ACCESS_KEY=${MINIO_ROOT_USER}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-copilot-files}
+      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-xtm-one-files}
       - S3_USE_SSL=false
       - LOG_LEVEL=${XTM_ONE_LOG_LEVEL:-info}
       - LOG_FORMAT=${XTM_ONE_LOG_FORMAT:-json}
@@ -563,7 +560,7 @@ services:
     ports:
       - "${XTM_ONE_PORT}:4000"
     depends_on:
-      pgsql-copilot:
+      pgsql-xtm-one:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -578,9 +575,6 @@ services:
       start_period: 60s
 
   xtm-one-worker:
-    build:
-      context: ../xtm-one
-      dockerfile: Dockerfile.worker
     image: filigran/xtm-one-worker:${XTM_ONE_VERSION:-rolling}
     environment:
       - PLATFORM_MODE=xtm_one
@@ -588,12 +582,12 @@ services:
       - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
       - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
       - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-copilot:5432/copilot
+      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-xtm-one:5432/xtm_one
       - REDIS_URL=redis://redis:6379
       - S3_ENDPOINT=minio:9000
       - S3_ACCESS_KEY=${MINIO_ROOT_USER}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-copilot-files}
+      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-xtm-one-files}
       - S3_USE_SSL=false
       - LOG_LEVEL=${XTM_ONE_LOG_LEVEL:-info}
       - LOG_FORMAT=${XTM_ONE_LOG_FORMAT:-json}
@@ -606,7 +600,7 @@ services:
 volumes:
   esdata:
   pgsqldata:
-  pgsqlcopilotdata:
+  pgsqlxtmonedata:
   s3data:
   redisdata:
   amqpdata:

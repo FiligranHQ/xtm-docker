@@ -8,7 +8,7 @@ This repository provides a complete Docker Compose setup for running:
 
 - **OpenCTI** — Open Cyber Threat Intelligence Platform
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
-- **XTM One** — AI copilot connecting OpenCTI and OpenAEV
+- **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
 - **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ, Redis
 - **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
@@ -117,7 +117,7 @@ IMAP_SSL_ENABLE=true
 IMAP_STARTTLS_ENABLE=false
 ```
 
-> **Tip:** Generate UUIDs using `uuidgen`. Long secrets (e.g. `SECRET_KEY`, `OPENCTI_ENCRYPTION_KEY`) should be 32-byte base64 strings produced with `openssl rand -base64 32`, **not** UUIDs.
+> **Tip:** Generate UUIDs using `uuidgen`. `OPENCTI_ENCRYPTION_KEY` must be a 32-byte base64 string produced with `openssl rand -base64 32`, **not** a UUID. `XTM_ONE_SECRET_KEY` and `PLATFORM_REGISTRATION_TOKEN` can be any long random string (e.g. `openssl rand -hex 32`).
 >
 > The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
 
@@ -133,7 +133,7 @@ Once all services are healthy (this may take a few minutes on first start):
 
 - **OpenCTI**: http://localhost:8080
 - **OpenAEV**: http://localhost:8081
-- **XTM One**: http://localhost:4000
+- **XTM One**: http://localhost:8090
 - **RabbitMQ Management**: http://localhost:15672
 
 ## Included Components
