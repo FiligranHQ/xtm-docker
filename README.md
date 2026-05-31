@@ -22,32 +22,45 @@ This repository provides a complete Docker Compose setup for running:
 
 ## Architecture
 
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                                 XTM Stack                                 │
-├───────────────────────────────────────────────────────────────────────────┤
-│                                                                           │
-│   ┌─────────────┐      ┌──────────────┐      ┌─────────────┐              │
-│   │   OpenCTI   │◄────►│ XTM Composer │◄────►│   OpenAEV   │              │
-│   │    :8080    │      └──────────────┘      │    :8081    │              │
-│   └──────┬──────┘                            └──────┬──────┘              │
-│          │                                          │                     │
-│          │            ┌─────────────┐               │                     │
-│          └───────────►│   XTM One   │◄──────────────┘                     │
-│                       │    :8090    │                                     │
-│                       └──────┬──────┘                                     │
-│                              │                                            │
-│     ┌────────────────────────┬──────────────────────────────────────┐     │
-│     │                     Shared Infrastructure                     │     │
-│     │            Elasticsearch · MinIO · RabbitMQ · Redis           │     │
-│     └───────────────────────────────────────────────────────────────┘     │
-│                                                                           │
-│   Dedicated data stores (per platform):                                   │
-│     • Redis ............... OpenCTI, XTM One                              │
-│     • PostgreSQL .......... OpenAEV                                       │
-│     • PostgreSQL+pgvector . XTM One  (pgsql-xtm-one)                      │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    OpenCTI["OpenCTI<br/>:8080"]
+    OpenAEV["OpenAEV<br/>:8081"]
+    XTMOne["XTM One<br/>:8090"]
+    Composer["XTM Composer"]
+    Worker["OpenCTI Worker"]
+    XTMOneWorker["XTM One Worker"]
+
+    OpenCTI <--> Composer
+    Composer <--> OpenAEV
+    OpenCTI <--> XTMOne
+    XTMOne <--> OpenAEV
+    Worker --> OpenCTI
+    XTMOneWorker --> XTMOne
+
+    subgraph Shared["Shared Infrastructure"]
+        ES[("Elasticsearch")]
+        MinIO[("MinIO")]
+        RabbitMQ[("RabbitMQ")]
+        Redis[("Redis")]
+    end
+
+    subgraph Stores["Dedicated databases"]
+        PG[("PostgreSQL — OpenAEV")]
+        PGV[("PostgreSQL + pgvector — XTM One")]
+    end
+
+    OpenCTI --> ES
+    OpenCTI --> MinIO
+    OpenCTI --> RabbitMQ
+    OpenCTI --> Redis
+    OpenAEV --> ES
+    OpenAEV --> MinIO
+    OpenAEV --> RabbitMQ
+    OpenAEV --> PG
+    XTMOne --> MinIO
+    XTMOne --> Redis
+    XTMOne --> PGV
 ```
 
 ## Quick Start
