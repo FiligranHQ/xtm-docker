@@ -1,6 +1,6 @@
 # XTM Docker Deployment
 
-Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti) and [OpenAEV](https://github.com/OpenAEV-Platform/openaev) into a unified threat intelligence and adversary emulation platform.
+Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev) and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
 
 ## Overview
 
@@ -8,9 +8,10 @@ This repository provides a complete Docker Compose setup for running:
 
 - **OpenCTI** — Open Cyber Threat Intelligence Platform
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
+- **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ
-- **Platform-specific** — Redis (OpenCTI), PostgreSQL (OpenAEV)
+- **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ, Redis
+- **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
 
 ## Prerequisites
 
@@ -21,35 +22,45 @@ This repository provides a complete Docker Compose setup for running:
 
 ## Architecture
 
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                              XTM Stack                                    │
-├───────────────────────────────────────────────────────────────────────────┤
-│                                                                           │
-│    ┌─────────────┐        ┌──────────────┐        ┌─────────────┐         │
-│    │   OpenCTI   │◄──────►│ XTM Composer │◄──────►│   OpenAEV   │         │
-│    │    :8080    │        │              │        │    :8081    │         │
-│    └─────┬────┬──┘        └──────────────┘        └───┬───┬─────┘         │
-│          │    │                                       │   │               │
-│          │    │                                       │   │               │
-│          ▼    │                                       │   ▼               │
-│    ┌─────────┐│                                       │┌───────────┐      │
-│    │  Redis  ││                                       ││PostgreSQL │      │
-│    └─────────┘│                                       │└───────────┘      │
-│               │                                       │                   │
-│               │  ┌────────────────────────────┐       │                   │
-│               └─►│   Shared Infrastructure    │◄──────┘                   │
-│                  │                            │                           │
-│                  │  ┌──────────────────────┐  │                           │
-│                  │  │    Elasticsearch     │  │                           │
-│                  │  └──────────────────────┘  │                           │
-│                  │                            │                           │
-│                  │  ┌─────────┐  ┌─────────┐  │                           │
-│                  │  │  MinIO  │  │RabbitMQ │  │                           │
-│                  │  └─────────┘  └─────────┘  │                           │
-│                  └────────────────────────────┘                           │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    OpenCTI["OpenCTI<br/>:8080"]
+    OpenAEV["OpenAEV<br/>:8081"]
+    XTMOne["XTM One<br/>:8090"]
+    Composer["XTM Composer"]
+    Worker["OpenCTI Worker"]
+    XTMOneWorker["XTM One Worker"]
+
+    OpenCTI <--> Composer
+    Composer <--> OpenAEV
+    OpenCTI <--> XTMOne
+    XTMOne <--> OpenAEV
+    Worker --> OpenCTI
+    XTMOneWorker --> XTMOne
+
+    subgraph Shared["Shared Infrastructure"]
+        ES[("Elasticsearch")]
+        MinIO[("MinIO")]
+        RabbitMQ[("RabbitMQ")]
+        Redis[("Redis")]
+    end
+
+    subgraph Stores["Dedicated databases"]
+        PG[("PostgreSQL — OpenAEV")]
+        PGV[("PostgreSQL + pgvector — XTM One")]
+    end
+
+    OpenCTI --> ES
+    OpenCTI --> MinIO
+    OpenCTI --> RabbitMQ
+    OpenCTI --> Redis
+    OpenAEV --> ES
+    OpenAEV --> MinIO
+    OpenAEV --> RabbitMQ
+    OpenAEV --> PG
+    XTMOne --> MinIO
+    XTMOne --> Redis
+    XTMOne --> PGV
 ```
 
 ## Quick Start
@@ -82,7 +93,7 @@ RABBITMQ_DEFAULT_PASS=<generate-strong-password>
 OPENCTI_EXTERNAL_SCHEME=http
 OPENCTI_HOST=localhost
 OPENCTI_PORT=8080
-OPENCTI_ADMIN_EMAIL=admin@opencti.io
+OPENCTI_ADMIN_EMAIL=admin@filigran.io
 OPENCTI_ADMIN_PASSWORD=<generate-strong-password>
 OPENCTI_ADMIN_TOKEN=<generate-uuid-v4>
 OPENCTI_HEALTHCHECK_ACCESS_KEY=<generate-uuid-v4>
@@ -91,7 +102,7 @@ OPENCTI_HEALTHCHECK_ACCESS_KEY=<generate-uuid-v4>
 OPENAEV_EXTERNAL_SCHEME=http
 OPENAEV_HOST=localhost
 OPENAEV_PORT=8081
-OPENAEV_ADMIN_EMAIL=admin@openaev.io
+OPENAEV_ADMIN_EMAIL=admin@filigran.io
 OPENAEV_ADMIN_PASSWORD=<generate-strong-password>
 OPENAEV_ADMIN_TOKEN=<generate-uuid-v4>
 OPENAEV_HEALTHCHECK_KEY=<generate-uuid-v4>
@@ -116,7 +127,9 @@ IMAP_SSL_ENABLE=true
 IMAP_STARTTLS_ENABLE=false
 ```
 
-> **Tip:** Generate UUIDs using `uuidgen` or online tools like [uuidgenerator.net](https://www.uuidgenerator.net/)
+> **Tip:** Generate UUIDs using `uuidgen`. `OPENCTI_ENCRYPTION_KEY` must be a 32-byte base64 string produced with `openssl rand -base64 32`, **not** a UUID. `XTM_ONE_SECRET_KEY` and `PLATFORM_REGISTRATION_TOKEN` can be any long random string (e.g. `openssl rand -hex 32`).
+>
+> The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
 
 ### 3. Start the stack
 
@@ -130,6 +143,7 @@ Once all services are healthy (this may take a few minutes on first start):
 
 - **OpenCTI**: http://localhost:8080
 - **OpenAEV**: http://localhost:8081
+- **XTM One**: http://localhost:8090
 - **RabbitMQ Management**: http://localhost:15672
 
 ## Included Components
