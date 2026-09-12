@@ -10,7 +10,7 @@ This repository provides a complete Docker Compose setup for running:
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, MinIO, RabbitMQ, Redis
+- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis
 - **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
 
 ## Prerequisites
@@ -40,7 +40,7 @@ graph TB
 
     subgraph Shared["Shared Infrastructure"]
         ES[("Elasticsearch")]
-        MinIO[("MinIO")]
+        Silo[("Silo (S3)")]
         RabbitMQ[("RabbitMQ")]
         Redis[("Redis")]
     end
@@ -51,14 +51,14 @@ graph TB
     end
 
     OpenCTI --> ES
-    OpenCTI --> MinIO
+    OpenCTI --> Silo
     OpenCTI --> RabbitMQ
     OpenCTI --> Redis
     OpenAEV --> ES
-    OpenAEV --> MinIO
+    OpenAEV --> Silo
     OpenAEV --> RabbitMQ
     OpenAEV --> PG
-    XTMOne --> MinIO
+    XTMOne --> Silo
     XTMOne --> Redis
     XTMOne --> PGV
 ```
@@ -81,7 +81,7 @@ Create a `.env` file with the required configuration. An example is available in
 POSTGRES_USER=openaev
 POSTGRES_PASSWORD=<generate-strong-password>
 
-# MinIO
+# Silo (S3 object storage, the variables keep their MINIO_ prefix)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=<generate-strong-password>
 
