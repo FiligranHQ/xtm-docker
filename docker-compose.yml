@@ -446,10 +446,10 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://openaev:8080/actuator/health/ping" ]
+      test: [ "CMD", "wget", "-qO-", "http://openaev:8080/api/health?health_access_key=${OPENAEV_HEALTHCHECK_KEY}" ]
       interval: 10s
       timeout: 5s
-      retries: 30
+      retries: 20
       start_period: 120s
 
   ###########################
