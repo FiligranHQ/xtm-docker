@@ -1,6 +1,6 @@
 # XTM Docker Deployment
 
-Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev) and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
+Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev) and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform, with OpenCRQ for cyber risk quantification as an option.
 
 ## Overview
 
@@ -10,8 +10,9 @@ This repository provides a complete Docker Compose setup for running:
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
+- **OpenCRQ** (optional, `opencrq` profile) — Cyber risk quantification, fed by OpenCTI and OpenAEV
 - **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis
-- **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
+- **Platform-specific** — PostgreSQL (OpenAEV, and OpenCRQ in its own database), PostgreSQL+pgvector (XTM One)
 
 ## Prerequisites
 
@@ -30,6 +31,7 @@ graph TB
     Composer["XTM Composer"]
     Worker["OpenCTI Worker"]
     XTMOneWorker["XTM One Worker"]
+    OpenCRQ["OpenCRQ<br/>:8082<br/>(opencrq profile)"]
 
     OpenCTI <--> Composer
     Composer <--> OpenAEV
@@ -37,6 +39,9 @@ graph TB
     XTMOne <--> OpenAEV
     Worker --> OpenCTI
     XTMOneWorker --> XTMOne
+    OpenCRQ <--> XTMOne
+    OpenCRQ --> OpenCTI
+    OpenCRQ --> OpenAEV
 
     subgraph Shared["Shared Infrastructure"]
         ES[("Elasticsearch")]
@@ -46,7 +51,7 @@ graph TB
     end
 
     subgraph Stores["Dedicated databases"]
-        PG[("PostgreSQL — OpenAEV")]
+        PG[("PostgreSQL — OpenAEV, OpenCRQ")]
         PGV[("PostgreSQL + pgvector — XTM One")]
     end
 
@@ -61,6 +66,8 @@ graph TB
     XTMOne --> Silo
     XTMOne --> Redis
     XTMOne --> PGV
+    OpenCRQ --> Silo
+    OpenCRQ --> PG
 ```
 
 ## Quick Start
@@ -129,13 +136,15 @@ IMAP_STARTTLS_ENABLE=false
 
 > **Tip:** Generate UUIDs using `uuidgen`. `OPENCTI_ENCRYPTION_KEY` must be a 32-byte base64 string produced with `openssl rand -base64 32`, **not** a UUID. `XTM_ONE_SECRET_KEY` and `PLATFORM_REGISTRATION_TOKEN` can be any long random string (e.g. `openssl rand -hex 32`).
 >
-> The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
+> The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI, OpenAEV and, with the `opencrq` profile, OpenCRQ register themselves with XTM One — it MUST be identical for XTM One and every platform that registers with it.
 
 ### 3. Start the stack
 
 ```bash
 docker compose up -d
 ```
+
+To deploy OpenCRQ as well, set `COMPOSE_PROFILES=opencrq` in `.env` before this command (see [OpenCRQ](#opencrq-optional)).
 
 ### 4. Access the platforms
 
@@ -144,6 +153,7 @@ Once all services are healthy (this may take a few minutes on first start):
 - **OpenCTI**: http://localhost:8080
 - **OpenAEV**: http://localhost:8081
 - **XTM One**: http://localhost:8090
+- **OpenCRQ** (with the `opencrq` profile): http://localhost:8082
 - **RabbitMQ Management**: http://localhost:15672
 
 > **Public and internal URLs:** the URLs above (built from `OPENCTI_HOST`, `OPENAEV_HOST`, `XTM_ONE_HOST`, their ports and their `*_EXTERNAL_SCHEME`: set the scheme to `https` together with the host when you publish them over TLS) are also the identity each product signs its requests to the others with, so they are set on both XTM One containers (`BASE_URL`). Inside the stack the containers reach each other on their service names (`http://opencti:8080`, `http://openaev:8080`, `http://xtm-one:4000`), so the public host names do not need to resolve inside Docker. This needs XTM One, OpenCTI and OpenAEV releases that include [XTM-One-Platform/xtm-one#4883](https://github.com/XTM-One-Platform/xtm-one/pull/4883), [OpenCTI-Platform/opencti#18585](https://github.com/OpenCTI-Platform/opencti/pull/18585) and [OpenAEV-Platform/openaev#8143](https://github.com/OpenAEV-Platform/openaev/pull/8143).
@@ -216,7 +226,36 @@ OPENCTI_PORT=443
 OPENAEV_EXTERNAL_SCHEME=https
 OPENAEV_HOST=openaev.yourdomain.com
 OPENAEV_PORT=443
+
+OPENCRQ_EXTERNAL_SCHEME=https
+OPENCRQ_HOST=opencrq.yourdomain.com
+OPENCRQ_PORT=443
 ```
+
+### OpenCRQ (optional)
+
+OpenCRQ is not deployed by default. It belongs to the `opencrq` [Compose profile](https://docs.docker.com/compose/how-tos/profiles/), together with two one-shot services that prepare its storage on each start: `opencrq-db-init` creates its role and database in the shared `pgsql` instance, and `opencrq-bucket-init` creates its bucket in Silo.
+
+To enable it, set the profile in `.env`:
+
+```bash
+COMPOSE_PROFILES=opencrq
+OPENCRQ_POSTGRES_PASSWORD=<generate-strong-password>
+```
+
+Set in `.env`, the profile applies to every command. Passing `--profile opencrq` on the command line works too, but then it has to be passed every time: a `docker compose down` without it leaves the OpenCRQ containers running, and `ps` and `logs` do not show them.
+
+OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`, and its OpenCTI and OpenAEV connectors are preconfigured with the admin tokens of both platforms. After the first start:
+
+1. Create the first OpenCRQ admin in the setup wizard at http://localhost:8082. Use the `XTM_ONE_ADMIN_EMAIL` address: XTM One matches users by email.
+2. In **Integrations**, link a service account to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
+
+Limitations:
+
+- The OpenCRQ session cookie is `Secure`. Over plain HTTP, browsers accept it on `localhost` at most, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
+- The links OpenCRQ shows to OpenCTI and OpenAEV objects use the connector URLs, which are the internal `http://opencti:8080` and `http://openaev:8080`.
+- OpenCRQ takes its edition from the XTM license XTM One returns. Without one it runs Community Edition: a single tenant and no embedded Ask Ariane chat.
+- OpenCRQ adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance it shares with OpenAEV.
 
 ## Common Operations
 
@@ -243,11 +282,15 @@ docker compose ps
 docker compose down
 ```
 
+With OpenCRQ, the `opencrq` profile must be active for this command too (see [OpenCRQ](#opencrq-optional)).
+
 ### Reset data (destructive)
 
 ```bash
 docker compose down -v
 ```
+
+With OpenCRQ, the same applies: its database and bucket live in the shared `pgsql` and Silo volumes.
 
 ## Troubleshooting
 
