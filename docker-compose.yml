@@ -59,12 +59,17 @@ services:
       timeout: 3s
       retries: 50
   pgsql:
-    # Shared by OpenAEV (openaev database) and XTM One (xtm_one database, created by
-    # xtm-one-db-init). XTM One needs the pgvector extension.
+    # Shared by OpenAEV (openaev database), XTM One (xtm_one database, created by
+    # xtm-one-db-init) and, with the opencrq profile, OpenCRQ (opencrq database, created
+    # by opencrq-db-init). XTM One needs the pgvector extension.
     image: pgvector/pgvector:pg17
-    # OpenAEV (up to 20 connections) and XTM One (up to 35 per process, tracing pool
-    # included, over 2 web workers and its worker) exceed the default of 100
+    # OpenAEV (up to 20 connections), XTM One (up to 35 per process, tracing pool
+    # included, over 2 web workers and its worker) and OpenCRQ (about 50 at peak)
+    # exceed the default of 100
     command: ["postgres", "-c", "max_connections=200"]
+    # Parallel queries pass their tuples through /dev/shm: past the 64 MB a container
+    # gets by default, the OpenCRQ aggregates fail with "could not resize shared memory segment"
+    shm_size: 1gb
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -577,6 +582,8 @@ services:
       # Internal API endpoints for platform integrations (Docker hostnames)
       - OPENCTI_API_URL=http://opencti:8080
       - OPENAEV_API_URL=http://openaev:8080
+      # Read when OpenCRQ registers, so it is harmless without the opencrq profile
+      - OPENCRQ_API_URL=http://opencrq:3002
       # The URL OpenCTI and OpenAEV reach XTM One on (XTM__XTM_ONE_URL,
       # OPENAEV_XTM_ONE_URL): accepted as the audience of the tokens they send,
       # for versions that address them to that URL instead of the BASE_URL above
@@ -624,6 +631,94 @@ services:
       xtm-one:
         condition: service_healthy
     restart: always
+
+  ###########################
+  # OPENCRQ                 #
+  ###########################
+  # Opt-in: started only with the opencrq profile (COMPOSE_PROFILES=opencrq in .env).
+
+  # Role and database of OpenCRQ in the shared pgsql instance. Unlike
+  # /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
+  opencrq-db-init:
+    image: pgvector/pgvector:pg17
+    profiles: ["opencrq"]
+    environment:
+      PGHOST: pgsql
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
+      OPENCRQ_POSTGRES_USER: ${OPENCRQ_POSTGRES_USER:-opencrq}
+      OPENCRQ_POSTGRES_PASSWORD: ${OPENCRQ_POSTGRES_PASSWORD:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        [ -n "$$OPENCRQ_POSTGRES_PASSWORD" ] || { echo "OPENCRQ_POSTGRES_PASSWORD is not set in .env" >&2; exit 1; }
+        [ "$$OPENCRQ_POSTGRES_USER" != "$$PGUSER" ] && [ "$$OPENCRQ_POSTGRES_USER" != "$$XTM_ONE_POSTGRES_USER" ] || { echo "OPENCRQ_POSTGRES_USER must differ from POSTGRES_USER and XTM_ONE_POSTGRES_USER: OpenCRQ needs a role of its own" >&2; exit 1; }
+        psql -v ON_ERROR_STOP=1 -v role="$$OPENCRQ_POSTGRES_USER" -v pw="$$OPENCRQ_POSTGRES_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
+        SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
+        SELECT format('CREATE DATABASE opencrq OWNER %I', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
+        SQL
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    restart: "no"
+  # OpenCRQ does not create its bucket in production: it stops at boot when it is missing
+  opencrq-bucket-init:
+    image: pgsty/silo:latest
+    profiles: ["opencrq"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      OPENCRQ_S3_BUCKET: ${OPENCRQ_S3_BUCKET:-opencrq}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - mc alias set silo http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null && mc mb --ignore-existing "silo/$$OPENCRQ_S3_BUCKET"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+  opencrq:
+    image: opencrq/platform:latest
+    profiles: ["opencrq"]
+    environment:
+      - HTTP_SERVER__HOST=0.0.0.0
+      - HTTP_SERVER__PORT=3002
+      - HEALTHCHECK_HTTP_SERVER__PORT=8444
+      - POSTGRES__HOST=pgsql
+      - POSTGRES__PORT=5432
+      - POSTGRES__DATABASE=opencrq
+      - POSTGRES__USER=${OPENCRQ_POSTGRES_USER:-opencrq}
+      - POSTGRES__PASSWORD=${OPENCRQ_POSTGRES_PASSWORD:-}
+      - FILE_STORAGE__ENDPOINT=http://minio:9000
+      - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
+      - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
+      # XTM One
+      - XTM_ONE__ENABLED=true
+      - XTM_ONE__URL=http://xtm-one:4000
+      - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+      - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
+      # OpenCTI and OpenAEV connectors, keyed by the id of the tenant every new OpenCRQ starts with
+      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://opencti:8080
+      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://openaev:8080
+      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENAEV_ADMIN_TOKEN}
+    ports:
+      - "${OPENCRQ_PORT:-8082}:3002"
+    depends_on:
+      opencrq-db-init:
+        condition: service_completed_successfully
+      opencrq-bucket-init:
+        condition: service_completed_successfully
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8444/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
 
 volumes:
   esdata:
