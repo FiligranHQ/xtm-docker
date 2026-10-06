@@ -10,8 +10,7 @@ This repository provides a complete Docker Compose setup for running:
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis
-- **Platform-specific** — PostgreSQL (OpenAEV), PostgreSQL+pgvector (XTM One)
+- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV and XTM One)
 
 ## Prerequisites
 
@@ -43,11 +42,7 @@ graph TB
         Silo[("Silo (S3)")]
         RabbitMQ[("RabbitMQ")]
         Redis[("Redis")]
-    end
-
-    subgraph Stores["Dedicated databases"]
-        PG[("PostgreSQL — OpenAEV")]
-        PGV[("PostgreSQL + pgvector — XTM One")]
+        PG[("PostgreSQL + pgvector")]
     end
 
     OpenCTI --> ES
@@ -60,7 +55,7 @@ graph TB
     OpenAEV --> PG
     XTMOne --> Silo
     XTMOne --> Redis
-    XTMOne --> PGV
+    XTMOne --> PG
 ```
 
 ## Quick Start
@@ -77,7 +72,7 @@ cd xtm-docker
 Create a `.env` file with the required configuration. An example is available in [.env.sample](.env.sample).
 
 ```bash
-# PostgreSQL
+# PostgreSQL (superuser of the shared instance, used by OpenAEV)
 POSTGRES_USER=openaev
 POSTGRES_PASSWORD=<generate-strong-password>
 
@@ -129,7 +124,7 @@ IMAP_STARTTLS_ENABLE=false
 
 > **Tip:** Generate UUIDs using `uuidgen`. `OPENCTI_ENCRYPTION_KEY` must be a 32-byte base64 string produced with `openssl rand -base64 32`, **not** a UUID. `XTM_ONE_SECRET_KEY` and `PLATFORM_REGISTRATION_TOKEN` can be any long random string (e.g. `openssl rand -hex 32`).
 >
-> The full XTM One configuration (admin credentials, image tag, dedicated Postgres credentials, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
+> The full XTM One configuration (admin credentials, image tag, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
 
 ### 3. Start the stack
 
@@ -248,6 +243,35 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+### Upgrade from separate PostgreSQL instances
+
+Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
+
+```bash
+docker compose stop openaev xtm-one xtm-one-worker
+docker compose exec -T pgsql sh -c 'pg_dump -U "$POSTGRES_USER" -Fc openaev' > openaev.dump
+docker compose exec -T pgsql-xtm-one sh -c 'pg_dump -U "$POSTGRES_USER" -Fc xtm_one' > xtm_one.dump
+docker compose down
+```
+
+Then pull the new version, prepare the shared instance (the `xtm-one-db-init` service creates the XTM One role, its database and the pgvector extension), restore both databases and start the stack:
+
+```bash
+git pull
+docker compose run --rm xtm-one-db-init
+docker compose exec -T pgsql sh -c 'pg_restore -U "$POSTGRES_USER" -d openaev' < openaev.dump
+docker compose exec -T pgsql sh -c 'pg_restore -U "$POSTGRES_USER" -d xtm_one' < xtm_one.dump
+docker compose up -d
+```
+
+Once both platforms show their data, remove the old volumes (their prefix is your `COMPOSE_PROJECT_NAME`):
+
+```bash
+docker volume rm xtm_pgsqldata xtm_pgsqlxtmonedata
+```
+
+If you started the new version before dumping, your data is still in the old volumes. Run `docker compose down`, remove the `xtm_pgsqlshareddata` volume (it only holds the empty databases created on that start), check out the previous version of this repository, and follow the steps above.
 
 ## Troubleshooting
 
