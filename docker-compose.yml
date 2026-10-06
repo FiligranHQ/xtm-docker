@@ -640,19 +640,21 @@ services:
   # Role and database of OpenCRQ in the shared pgsql instance. Unlike
   # /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
   opencrq-db-init:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     profiles: ["opencrq"]
     environment:
       PGHOST: pgsql
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: postgres
+      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
       OPENCRQ_POSTGRES_USER: ${OPENCRQ_POSTGRES_USER:-opencrq}
       OPENCRQ_POSTGRES_PASSWORD: ${OPENCRQ_POSTGRES_PASSWORD:-}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         [ -n "$$OPENCRQ_POSTGRES_PASSWORD" ] || { echo "OPENCRQ_POSTGRES_PASSWORD is not set in .env" >&2; exit 1; }
+        [ "$$OPENCRQ_POSTGRES_USER" != "$$PGUSER" ] && [ "$$OPENCRQ_POSTGRES_USER" != "$$XTM_ONE_POSTGRES_USER" ] || { echo "OPENCRQ_POSTGRES_USER must differ from POSTGRES_USER and XTM_ONE_POSTGRES_USER: OpenCRQ needs a role of its own" >&2; exit 1; }
         psql -v ON_ERROR_STOP=1 -v role="$$OPENCRQ_POSTGRES_USER" -v pw="$$OPENCRQ_POSTGRES_PASSWORD" <<'SQL'
         SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
         SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
