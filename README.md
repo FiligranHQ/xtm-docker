@@ -271,7 +271,7 @@ Once both platforms show their data, remove the old volumes (their prefix is you
 docker volume rm xtm_pgsqldata xtm_pgsqlxtmonedata
 ```
 
-If you started the new version before dumping, your data is still in the old volumes. Run `docker compose down`, remove the `xtm_pgsqlshareddata` volume (it only holds the empty databases created on that start), check out the previous version of this repository, and follow the steps above.
+If you started the new version before dumping, your data is still in the old volumes. The `xtm_pgsqlshareddata` volume then holds the databases the platforms created on that start, with everything written to them since, and removing it deletes those writes for good: if you need any of them, dump both databases from `pgsql` first, with the same `pg_dump` commands. Then run `docker compose down`, remove the `xtm_pgsqlshareddata` volume, check out the previous version of this repository, and follow the steps above.
 
 ## Troubleshooting
 

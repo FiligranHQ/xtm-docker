@@ -541,6 +541,7 @@ services:
     command:
       - |
         [ -n "$$XTM_ONE_POSTGRES_USER" ] && [ -n "$$XTM_ONE_POSTGRES_PASSWORD" ] || { echo "XTM_ONE_POSTGRES_USER and XTM_ONE_POSTGRES_PASSWORD must be set in .env" >&2; exit 1; }
+        [ "$$XTM_ONE_POSTGRES_USER" != "$$PGUSER" ] || { echo "XTM_ONE_POSTGRES_USER must differ from POSTGRES_USER, the superuser of the shared instance" >&2; exit 1; }
         psql -v ON_ERROR_STOP=1 -v role="$$XTM_ONE_POSTGRES_USER" -v pw="$$XTM_ONE_POSTGRES_PASSWORD" <<'SQL'
         SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
         SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
