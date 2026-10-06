@@ -59,7 +59,14 @@ services:
       timeout: 3s
       retries: 50
   pgsql:
-    image: postgres:17-alpine
+    # Shared by OpenAEV (openaev database), XTM One (xtm_one database, created by
+    # xtm-one-db-init) and, with the opencrq profile, OpenCRQ (opencrq database, created
+    # by opencrq-db-init). XTM One needs the pgvector extension.
+    image: pgvector/pgvector:pg17
+    # OpenAEV (up to 20 connections), XTM One (up to 35 per process, tracing pool
+    # included, over 2 web workers and its worker) and OpenCRQ (about 50 at peak)
+    # exceed the default of 100
+    command: ["postgres", "-c", "max_connections=200"]
     # Parallel queries pass their tuples through /dev/shm: past the 64 MB a container
     # gets by default, the OpenCRQ aggregates fail with "could not resize shared memory segment"
     shm_size: 1gb
@@ -68,25 +75,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: openaev
     volumes:
-      - pgsqldata:/var/lib/postgresql/data
+      - pgsqlshareddata:/var/lib/postgresql/data
     restart: always
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "openaev" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  pgsql-xtm-one:
-    # Dedicated pgvector-enabled instance for XTM One.
-    image: pgvector/pgvector:pg17
-    environment:
-      POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${XTM_ONE_POSTGRES_PASSWORD}
-      POSTGRES_DB: xtm_one
-    volumes:
-      - pgsqlxtmonedata:/var/lib/postgresql/data
-    restart: always
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${XTM_ONE_POSTGRES_USER}", "-d", "xtm_one" ]
+      # Over TCP: on the first start, the temporary server that initialises the volume
+      # listens on the Unix socket only, and every client connects over TCP
+      test: [ "CMD", "pg_isready", "-h", "localhost", "-U", "${POSTGRES_USER}", "-d", "openaev" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -536,6 +530,35 @@ services:
   # XTM ONE                 #
   ###########################
 
+  # Role, database and pgvector extension of XTM One in the shared pgsql instance. The
+  # role is not a superuser, and only a superuser can create pgvector (not a trusted
+  # extension). Unlike /docker-entrypoint-initdb.d, it also runs on an existing volume.
+  xtm-one-db-init:
+    image: pgvector/pgvector:pg17
+    environment:
+      PGHOST: pgsql
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
+      XTM_ONE_POSTGRES_PASSWORD: ${XTM_ONE_POSTGRES_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        [ -n "$$XTM_ONE_POSTGRES_USER" ] && [ -n "$$XTM_ONE_POSTGRES_PASSWORD" ] || { echo "XTM_ONE_POSTGRES_USER and XTM_ONE_POSTGRES_PASSWORD must be set in .env" >&2; exit 1; }
+        [ "$$XTM_ONE_POSTGRES_USER" != "$$PGUSER" ] || { echo "XTM_ONE_POSTGRES_USER must differ from POSTGRES_USER, the superuser of the shared instance" >&2; exit 1; }
+        psql -v ON_ERROR_STOP=1 -v role="$$XTM_ONE_POSTGRES_USER" -v pw="$$XTM_ONE_POSTGRES_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
+        SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
+        SELECT format('CREATE DATABASE xtm_one OWNER %I', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'xtm_one') \gexec
+        \connect xtm_one
+        CREATE EXTENSION IF NOT EXISTS vector;
+        SQL
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    restart: "no"
+
   xtm-one:
     image: xtmone/platform:latest
     environment:
@@ -546,7 +569,7 @@ services:
       - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
       - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
       - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-xtm-one:5432/xtm_one
+      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql:5432/xtm_one
       - REDIS_URL=redis://redis:6379
       - S3_ENDPOINT=minio:9000
       - S3_ACCESS_KEY=${MINIO_ROOT_USER}
@@ -568,8 +591,8 @@ services:
     ports:
       - "${XTM_ONE_PORT}:4000"
     depends_on:
-      pgsql-xtm-one:
-        condition: service_healthy
+      xtm-one-db-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio:
@@ -594,7 +617,7 @@ services:
       - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
       - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
       - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql-xtm-one:5432/xtm_one
+      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql:5432/xtm_one
       - REDIS_URL=redis://redis:6379
       - S3_ENDPOINT=minio:9000
       - S3_ACCESS_KEY=${MINIO_ROOT_USER}
@@ -697,8 +720,7 @@ services:
 
 volumes:
   esdata:
-  pgsqldata:
-  pgsqlxtmonedata:
+  pgsqlshareddata:
   s3data:
   redisdata:
   amqpdata:
