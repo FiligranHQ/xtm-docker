@@ -11,8 +11,8 @@ fi
 
 TARGET_USER="$(id -un)"
 
-echo "==> Elasticsearch: vm.max_map_count=262144 (persistent)"
-echo 'vm.max_map_count = 262144' | sudo tee /etc/sysctl.d/90-xtm-elasticsearch.conf >/dev/null
+echo "==> Elasticsearch: vm.max_map_count=1048575 (persistent)"
+echo 'vm.max_map_count = 1048575' | sudo tee /etc/sysctl.d/90-xtm-elasticsearch.conf >/dev/null
 sudo sysctl -q -p /etc/sysctl.d/90-xtm-elasticsearch.conf
 
 echo "==> OpenSandbox egress: preload netfilter modules (rootless netns cannot autoload them)"

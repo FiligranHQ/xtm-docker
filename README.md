@@ -293,7 +293,7 @@ The stack runs on rootless Podman with SELinux enforcing. This was validated on 
    ./scripts/podman-host-prep.sh
    ```
    The script:
-   - sets `vm.max_map_count=262144` for Elasticsearch;
+   - sets `vm.max_map_count=1048575` for Elasticsearch;
    - preloads the netfilter modules the OpenSandbox egress sidecar needs (a rootless network namespace cannot load them itself);
    - enables linger and the user's `podman.socket`;
    - enables `podman-restart.service`. **Without it, rootless Podman does not restart any container after a reboot**, even with `restart: always`.
@@ -320,7 +320,7 @@ Good to know:
 
 1. Check if Elasticsearch has enough virtual memory:
    ```bash
-   sudo sysctl -w vm.max_map_count=262144
+   sudo sysctl -w vm.max_map_count=1048575
    ```
 
 2. Verify all environment variables are set in `.env`
