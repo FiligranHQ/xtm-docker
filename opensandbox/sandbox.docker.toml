@@ -64,7 +64,10 @@ no_new_privileges = true
 apparmor_profile = ""
 # Limit process count to reduce host impact from fork bombs; set to null to disable
 # pids_limit = 4096
-pids_limit = 50
+# 50 upstream; OpenBLAS (numpy, imported by the code-interpreter wrapper) starts one
+# thread per visible CPU and pids_limit counts threads, so on a host with many cores
+# (64 on the lab VM) every Python sandbox fails at import. 256 keeps fork-bomb protection.
+pids_limit = 256
 # Seccomp profile: empty string uses Docker default; set to an absolute path for a custom profile
 seccomp_profile = ""
 

@@ -12,3 +12,11 @@ services:
   es03:
     ulimits: !override
       nofile: {soft: 65536, hard: 65536}
+
+  # The OpenSandbox server only resolves host.docker.internal (its [docker].host_ip) for
+  # the egress-sidecar readiness probe when it sees /.dockerenv; Podman creates
+  # /run/.containerenv instead, so without this marker the server probes its own
+  # 127.0.0.1 and every sandbox fails with "Egress sidecar did not become ready".
+  opensandbox:
+    volumes:
+      - ./opensandbox/dockerenv:/.dockerenv:ro,z
