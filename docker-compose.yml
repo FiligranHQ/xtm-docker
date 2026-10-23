@@ -311,6 +311,11 @@ services:
       - OPENAEV__TOKEN=${OPENAEV_ADMIN_TOKEN}
       - OPENAEV__DAEMON__SELECTOR=docker
       - OPENAEV__DAEMON__DOCKER__NETWORK_MODE=${COMPOSE_PROJECT_NAME}_default
+    # Needed to reach the engine socket under SELinux enforcing (rootless Podman on
+    # RHEL-family hosts, where container_t may not connect to the socket); no effect
+    # without SELinux. Same as opensandbox.
+    security_opt:
+      - label=disable
     volumes:
       - ${CONTAINER_ENGINE_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - rsakeys:/keys:ro  # RSA key mounted as read-only
