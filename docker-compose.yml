@@ -42,6 +42,44 @@ x-xtm-one-environment: &xtm-one-environment
   # Self-hosted: no usage-based sandbox billing
   DISABLE_SANDBOX_QUOTA_USAGE: ${DISABLE_SANDBOX_QUOTA_USAGE:-true}
 
+# OpenCTI settings shared by the front and ingest nodes (same image, same backends;
+# the role comes from routing and from which managers each node runs)
+x-opencti-environment: &opencti-environment
+  NODE_OPTIONS: '--max-old-space-size=8096'
+  APP__PORT: '8080'
+  APP__BASE_URL: '${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}'
+  APP__ADMIN__EMAIL: '${OPENCTI_ADMIN_EMAIL}'
+  APP__ADMIN__PASSWORD: '${OPENCTI_ADMIN_PASSWORD}'
+  APP__ADMIN__TOKEN: '${OPENCTI_ADMIN_TOKEN}'
+  APP__ENCRYPTION_KEY: '${OPENCTI_ENCRYPTION_KEY}'
+  APP__APP_LOGS__LOGS_LEVEL: 'error'
+  REDIS__MODE: 'sentinel'
+  REDIS__HOSTNAMES: '["redis-sentinel-1:26379","redis-sentinel-2:26379","redis-sentinel-3:26379"]'
+  REDIS__SENTINEL_MASTER_NAME: '${REDIS_SENTINEL_MASTER_NAME:-xtm-master}'
+  REDIS__SENTINEL_FAILOVER_DETECTOR: 'true'
+  ELASTICSEARCH__URL: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
+  ELASTICSEARCH__NUMBER_OF_REPLICAS: '1'
+  MINIO__ENDPOINT: 'minio'
+  MINIO__PORT: '9000'
+  MINIO__USE_SSL: 'false'
+  MINIO__ACCESS_KEY: '${MINIO_ROOT_USER}'
+  MINIO__SECRET_KEY: '${MINIO_ROOT_PASSWORD}'
+  RABBITMQ__HOSTNAME: 'rabbitmq'
+  RABBITMQ__PORT: '5672'
+  RABBITMQ__PORT_MANAGEMENT: '15672'
+  RABBITMQ__MANAGEMENT_SSL: 'false'
+  RABBITMQ__USERNAME: '${RABBITMQ_DEFAULT_USER}'
+  RABBITMQ__PASSWORD: '${RABBITMQ_DEFAULT_PASS}'
+  SMTP__HOSTNAME: '${SMTP_HOST}'
+  SMTP__PORT: '25'
+  PROVIDERS__LOCAL__STRATEGY: 'LocalStrategy'
+  APP__HEALTH_ACCESS_KEY: '${OPENCTI_HEALTHCHECK_ACCESS_KEY}'
+  XTM__OPENAEV_URL: '${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}'
+  XTM__OPENAEV_API_URL: 'http://openaev:8080'
+  XTM__OPENAEV_TOKEN: '${OPENAEV_ADMIN_TOKEN}'
+  XTM__XTM_ONE_URL: 'http://xtm-one:4000'
+  XTM__XTM_ONE_TOKEN: '${PLATFORM_REGISTRATION_TOKEN}'
+
 services:
 
   ###########################
@@ -289,45 +327,30 @@ services:
   # OPENCTI                 #
   ###########################
 
+  # Front: UI/API for users, connector registration, XTM One / OpenAEV / xtm-composer.
+  # Managers off, as in helm-generic-xtm's front (OpenCTI clustering doc). It runs
+  # platform init first; the ingest node waits for it.
   opencti:
     image: opencti/platform:latest
     environment:
-      - NODE_OPTIONS=--max-old-space-size=8096
-      - APP__PORT=8080
-      - APP__BASE_URL=${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}
-      - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL}
-      - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD}
-      - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - APP__ENCRYPTION_KEY=${OPENCTI_ENCRYPTION_KEY}
-      - APP__APP_LOGS__LOGS_LEVEL=error
-      - REDIS__MODE=sentinel
-      - REDIS__HOSTNAMES=["redis-sentinel-1:26379","redis-sentinel-2:26379","redis-sentinel-3:26379"]
-      - REDIS__SENTINEL_MASTER_NAME=${REDIS_SENTINEL_MASTER_NAME:-xtm-master}
-      - REDIS__SENTINEL_FAILOVER_DETECTOR=true
-      - ELASTICSEARCH__URL=["http://es01:9200","http://es02:9200","http://es03:9200"]
-      - ELASTICSEARCH__NUMBER_OF_REPLICAS=1
-      - MINIO__ENDPOINT=minio
-      - MINIO__PORT=9000
-      - MINIO__USE_SSL=false
-      - MINIO__ACCESS_KEY=${MINIO_ROOT_USER}
-      - MINIO__SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - RABBITMQ__HOSTNAME=rabbitmq
-      - RABBITMQ__PORT=5672
-      - RABBITMQ__PORT_MANAGEMENT=15672
-      - RABBITMQ__MANAGEMENT_SSL=false
-      - RABBITMQ__USERNAME=${RABBITMQ_DEFAULT_USER}
-      - RABBITMQ__PASSWORD=${RABBITMQ_DEFAULT_PASS}
-      - SMTP__HOSTNAME=${SMTP_HOST}
-      - SMTP__PORT=25
-      - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
-      - APP__HEALTH_ACCESS_KEY=${OPENCTI_HEALTHCHECK_ACCESS_KEY}
-      # OpenAEV
-      - XTM__OPENAEV_URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
-      - XTM__OPENAEV_API_URL=http://openaev:8080
-      - XTM__OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
-      # XTM One
-      - XTM__XTM_ONE_URL=http://xtm-one:4000
-      - XTM__XTM_ONE_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+      <<: *opencti-environment
+      RULE_ENGINE__ENABLED: "false"
+      HISTORY_MANAGER__ENABLED: "false"
+      ACTIVITY_MANAGER__ENABLED: "false"
+      CONNECTOR_MANAGER__ENABLED: "false"
+      TASK_SCHEDULER__ENABLED: "false"
+      EXPIRATION_SCHEDULER__ENABLED: "false"
+      NOTIFICATION_MANAGER__ENABLED: "false"
+      PIR_MANAGER__ENABLED: "false"
+      PLAYBOOK_MANAGER__ENABLED: "false"
+      PUBLISHER_MANAGER__ENABLED: "false"
+      SYNC_MANAGER__ENABLED: "false"
+      INGESTION_MANAGER__ENABLED: "false"
+      RETENTION_MANAGER__ENABLED: "false"
+      FILE_INDEX_MANAGER__ENABLED: "false"
+      INDICATOR_DECAY_MANAGER__ENABLED: "false"
+      GARBAGE_COLLECTION_MANAGER__ENABLED: "false"
+      HUB_REGISTRATION_MANAGER__ENABLED: "false"
     ports:
       - "${OPENCTI_PORT}:8080"
     depends_on:
@@ -353,13 +376,44 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+  # Ingest: only the workers call it; not published. Managers run here.
+  opencti-ingest:
+    image: opencti/platform:latest
+    environment:
+      <<: *opencti-environment
+    depends_on:
+      redis-sentinel-1:
+        condition: service_healthy
+      redis-sentinel-2:
+        condition: service_healthy
+      redis-sentinel-3:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+      es02:
+        condition: service_healthy
+      es03:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      opencti:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test:  ["CMD", "wget", "-qO-", "http://opencti-ingest:8080/health?health_access_key=${OPENCTI_HEALTHCHECK_ACCESS_KEY}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  # 3 workers per ingest node
   worker:
     image: opencti/worker:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://opencti-ingest:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
     depends_on:
-      opencti:
+      opencti-ingest:
         condition: service_healthy
     deploy:
       mode: replicated
