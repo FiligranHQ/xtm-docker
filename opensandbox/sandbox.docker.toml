@@ -1,0 +1,84 @@
+# From XTM-One-Platform/xtm-one backend/sandbox/sandbox.docker.toml @ 74677c9 (2026-10-23).
+# Change: execd and egress images qualified with docker.io/ (Podman short-name resolution).
+
+# Copyright 2025 Alibaba Group Holding Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Example Docker Runtime Configuration for OpenSandbox Server
+#
+# Full configuration reference: https://github.com/alibaba/OpenSandbox/blob/main/server/configuration.md
+
+[server]
+host = "0.0.0.0"
+port = 8090
+# api_key is set via environment variables so the same
+# config file works for both local runs and containerised deployments:
+#   OPENSANDBOX_SERVER_API_KEY – API key sent by clients in the request header.
+# Server defaults when the variables are absent: host=0.0.0.0, port=8080,
+# api_key=null (authentication disabled; set a non-empty key for production).
+max_sandbox_timeout_seconds = 86400
+
+[log]
+level = "INFO"
+
+[runtime]
+type = "docker"
+execd_image = "docker.io/opensandbox/execd:v1.0.20"
+
+[storage]
+# Allowlist of host path prefixes permitted for bind mounts.
+# If empty, all host paths are allowed (not recommended for production).
+# Example: allowed_host_paths = ["/data/opensandbox", "/tmp/sandbox"]
+allowed_host_paths = []
+
+# Default storage size for auto-created Kubernetes PVCs (when caller omits size).
+volume_default_size = "1Gi"
+
+[store]
+type = "sqlite"
+path = "~/.opensandbox/opensandbox.db"
+
+[docker]
+network_mode = "bridge"
+# host_ip tells the server how to reach host-mapped ports (e.g. the egress
+# sidecar's /healthz) when the server itself runs inside a Docker container.
+# Without this, _resolve_proxy_host() falls back to 127.0.0.1, which is the
+# container's own loopback and cannot reach host-mapped sidecar ports.
+host_ip = "host.docker.internal"
+# Drop dangerous capabilities and block privilege escalation
+# drop_capabilities = ["AUDIT_WRITE", "MKNOD", "NET_ADMIN", "NET_RAW", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_TIME", "SYS_TTY_CONFIG"]
+drop_capabilities = ["ALL"]
+no_new_privileges = true
+# Optional: set an AppArmor profile name (e.g., "docker-default") when AppArmor is enabled
+apparmor_profile = ""
+# Limit process count to reduce host impact from fork bombs; set to null to disable
+# pids_limit = 4096
+pids_limit = 50
+# Seccomp profile: empty string uses Docker default; set to an absolute path for a custom profile
+seccomp_profile = ""
+
+[ingress]
+mode = "direct"
+
+[egress]
+image = "docker.io/opensandbox/egress:v1.1.0"
+# dns+nft adds nftables IP-level enforcement on top of DNS interception.
+# With dns-only, code that connects via a hardcoded IP bypasses the policy.
+mode = "dns+nft"
+
+# 🧪 [EXPERIMENTAL] Renew-on-access. Off by default — see server/README.md.
+[renew_intent]
+enabled = false
+min_interval_seconds = 60
+

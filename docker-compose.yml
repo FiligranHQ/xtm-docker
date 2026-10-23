@@ -1,3 +1,45 @@
+# Settings XTM One's platform and workers both read (see XTM One's docker-compose.yml)
+x-xtm-one-environment: &xtm-one-environment
+  PLATFORM_MODE: xtm_one
+  PLATFORM_REGISTRATION_TOKEN: ${PLATFORM_REGISTRATION_TOKEN}
+  # The workers build absolute links and sign the tokens of background work too
+  BASE_URL: ${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
+  FRONTEND_URL: ${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
+  BASE_PATH: ${XTM_ONE_BASE_PATH:-}
+  ADMIN_EMAIL: ${XTM_ONE_ADMIN_EMAIL}
+  ADMIN_PASSWORD: ${XTM_ONE_ADMIN_PASSWORD}
+  SECRET_KEY: ${XTM_ONE_SECRET_KEY}
+  DATABASE_URL: postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql:5432/xtm_one
+  REDIS_URL: redis://redis:6379
+  S3_ENDPOINT: minio:9000
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  S3_BUCKET: ${XTM_ONE_S3_BUCKET:-xtm-one-files}
+  S3_USE_SSL: "false"
+  LOG_LEVEL: ${XTM_ONE_LOG_LEVEL:-info}
+  LOG_FORMAT: ${XTM_ONE_LOG_FORMAT:-json}
+  ENTERPRISE_LICENSE: ${XTM_ONE_ENTERPRISE_LICENSE:-}
+  # Feature flags, empty by default (e.g. VIDEO_STUDIO)
+  ENABLED_FEATURES: ${XTM_ONE_ENABLED_FEATURES:-}
+  RUNNERS_ENABLED: ${XTM_ONE_RUNNERS_ENABLED:-true}
+  RELAYS_ENABLED: ${XTM_ONE_RELAYS_ENABLED:-true}
+  # Internal API endpoints for platform integrations (Docker hostnames)
+  OPENCTI_API_URL: http://opencti:8080
+  OPENAEV_API_URL: http://openaev:8080
+  # Custom tool and code interpreter isolation: opensandbox (the opensandbox service)
+  # | docker | subprocess | auto
+  CUSTOM_TOOL_SANDBOX: ${XTM_ONE_CUSTOM_TOOL_SANDBOX:-opensandbox}
+  OPENSANDBOX_DOMAIN: ${OPENSANDBOX_DOMAIN:-opensandbox:8090}
+  OPENSANDBOX_PROTOCOL: ${OPENSANDBOX_PROTOCOL:-http}
+  OPENSANDBOX_API_KEY: ${OPENSANDBOX_API_KEY:-}
+  # XTM One's defaults (sandbox-python:0.3, sandbox-nodejs:0.3) name locally built
+  # images: use the published ones
+  OPENSANDBOX_IMAGES: ${OPENSANDBOX_IMAGES:-python:docker.io/xtmone/sandbox-python:0.3,nodejs:docker.io/xtmone/sandbox-nodejs:0.3}
+  # Egress allowed from the sandboxes (domains/IPs, comma-separated); empty = none
+  OPENSANDBOX_NETWORK_ALLOW: ${OPENSANDBOX_NETWORK_ALLOW:-}
+  # Self-hosted: no usage-based sandbox billing
+  DISABLE_SANDBOX_QUOTA_USAGE: ${DISABLE_SANDBOX_QUOTA_USAGE:-true}
+
 services:
 
   ###########################
@@ -63,7 +105,7 @@ services:
     # xtm-one-db-init). XTM One needs the pgvector extension.
     image: pgvector/pgvector:pg17
     # OpenAEV (up to 20 connections) and XTM One (up to 35 per process, tracing pool
-    # included, over 2 web workers and its worker) exceed the default of 100
+    # included, over 2 web workers and its 3 workers) exceed the default of 100
     command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -138,7 +180,7 @@ services:
       - OPENAEV__DAEMON__SELECTOR=docker
       - OPENAEV__DAEMON__DOCKER__NETWORK_MODE=${COMPOSE_PROJECT_NAME}_default
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${CONTAINER_ENGINE_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - rsakeys:/keys:ro  # RSA key mounted as read-only
     depends_on:
       rsa-key-generator:
@@ -554,35 +596,61 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # OpenSandbox server: runs the code interpreter and custom tools of XTM One in
+  # containers it starts through the container engine's API socket
+  # (CONTAINER_ENGINE_SOCKET, e.g. $XDG_RUNTIME_DIR/podman/podman.sock under rootless
+  # Podman). Used when XTM_ONE_CUSTOM_TOOL_SANDBOX=opensandbox; idle otherwise.
+  # Mirrors the opensandbox service of XTM One's docker-compose.yml.
+  opensandbox:
+    image: docker.io/opensandbox/server:${OPENSANDBOX_SERVER_IMAGE_TAG:-v0.2.1}
+    environment:
+      # Same key as the one XTM One sends (OPENSANDBOX_API_KEY). Unset, the server,
+      # which drives the container engine, accepts unauthenticated requests.
+      OPENSANDBOX_SERVER_API_KEY: ${OPENSANDBOX_API_KEY:-}
+    # Sandboxes publish their ports on the host and are advertised as
+    # host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Unlabeled so the server may use the engine socket on an SELinux host (it is then
+    # not confined by SELinux there); no effect without SELinux
+    security_opt:
+      - label=disable
+    volumes:
+      - ${CONTAINER_ENGINE_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ./opensandbox/sandbox.docker.toml:/etc/opensandbox/config.toml:ro,z
+    # Holds the engine socket: on a network of its own with XTM One and its workers
+    # only, so no other container of the stack reaches it
+    networks:
+      - opensandbox
+    restart: always
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   xtm-one:
     image: xtmone/platform:latest
     environment:
-      - PLATFORM_MODE=xtm_one
-      - PLATFORM_REGISTRATION_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
-      - BASE_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
-      - FRONTEND_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
-      - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
-      - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql:5432/xtm_one
-      - REDIS_URL=redis://redis:6379
-      - S3_ENDPOINT=minio:9000
-      - S3_ACCESS_KEY=${MINIO_ROOT_USER}
-      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-xtm-one-files}
-      - S3_USE_SSL=false
-      - LOG_LEVEL=${XTM_ONE_LOG_LEVEL:-info}
-      - LOG_FORMAT=${XTM_ONE_LOG_FORMAT:-json}
-      - ENTERPRISE_LICENSE=${XTM_ONE_ENTERPRISE_LICENSE:-}
-      # Internal API endpoints for platform integrations (Docker hostnames)
-      - OPENCTI_API_URL=http://opencti:8080
-      - OPENAEV_API_URL=http://openaev:8080
+      <<: *xtm-one-environment
+      # Content-Security-Policy on the HTML pages (report-only | enforce | off)
+      CONTENT_SECURITY_POLICY_MODE: ${XTM_ONE_CONTENT_SECURITY_POLICY_MODE:-report-only}
+      CONTENT_SECURITY_POLICY_FRAME_ANCESTORS: ${XTM_ONE_CONTENT_SECURITY_POLICY_FRAME_ANCESTORS:-}
+      WEB_WORKERS: ${XTM_ONE_WEB_WORKERS:-2}
+      GRACEFUL_TIMEOUT: ${XTM_ONE_GRACEFUL_TIMEOUT:-120}
+      # Proxy peers allowed to set the client address and scheme (behind a TLS proxy)
+      FORWARDED_ALLOW_IPS: ${XTM_ONE_FORWARDED_ALLOW_IPS:-127.0.0.1}
       # The URL OpenCTI and OpenAEV reach XTM One on (XTM__XTM_ONE_URL,
       # OPENAEV_XTM_ONE_URL): accepted as the audience of the tokens they send,
       # for versions that address them to that URL instead of the BASE_URL above
-      - XTM_AUTH_ACCEPTED_AUDIENCES=http://xtm-one:4000
+      XTM_AUTH_ACCEPTED_AUDIENCES: http://xtm-one:4000
     ports:
       - "${XTM_ONE_PORT}:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - opensandbox
     depends_on:
       xtm-one-db-init:
         condition: service_completed_successfully
@@ -592,38 +660,62 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/api/health || exit 1"]
+      # Readiness, not liveness: /api/health answers 200 while migrations and seeding
+      # still run; /api/health/ready only once startup has completed
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/api/health/ready')\""]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 60s
 
-  xtm-one-worker:
+  # Background worker (SAQ). Draws whole Video Studio renders and scene previews, and
+  # runs every other background job.
+  xtm-one-worker: &xtm-one-worker
     image: xtmone/worker:latest
     environment:
-      - PLATFORM_MODE=xtm_one
-      - PLATFORM_REGISTRATION_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
-      # Same public URL as the xtm-one service: the worker signs the tokens of
-      # background work (assignments, delegated tasks, autonomous runs)
-      - BASE_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
-      - FRONTEND_URL=${XTM_ONE_EXTERNAL_SCHEME}://${XTM_ONE_HOST}:${XTM_ONE_PORT}
-      - ADMIN_EMAIL=${XTM_ONE_ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${XTM_ONE_ADMIN_PASSWORD}
-      - SECRET_KEY=${XTM_ONE_SECRET_KEY}
-      - DATABASE_URL=postgresql+asyncpg://${XTM_ONE_POSTGRES_USER}:${XTM_ONE_POSTGRES_PASSWORD}@pgsql:5432/xtm_one
-      - REDIS_URL=redis://redis:6379
-      - S3_ENDPOINT=minio:9000
-      - S3_ACCESS_KEY=${MINIO_ROOT_USER}
-      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=${XTM_ONE_S3_BUCKET:-xtm-one-files}
-      - S3_USE_SSL=false
-      - LOG_LEVEL=${XTM_ONE_LOG_LEVEL:-info}
-      - LOG_FORMAT=${XTM_ONE_LOG_FORMAT:-json}
-      - ENTERPRISE_LICENSE=${XTM_ONE_ENTERPRISE_LICENSE:-}
+      <<: *xtm-one-environment
+      WORKER_CONCURRENCY: ${XTM_ONE_WORKER_CONCURRENCY:-20}
+      WORKER_JOB_TIMEOUT: ${XTM_ONE_WORKER_JOB_TIMEOUT:-600}
+      WORKER_SHUTDOWN_GRACE_PERIOD: 20
+      # Its stop_grace_period, below
+      WORKER_TERMINATION_GRACE_SECONDS: 1260
+    # Above the SAQ shutdown grace, and long enough for the renders a stopping worker
+    # lets finish (VIDEO_STUDIO_RENDER_DRAIN_SECONDS, 20 min)
+    stop_grace_period: 1260s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - opensandbox
     depends_on:
       xtm-one:
         condition: service_healthy
     restart: always
+    healthcheck:
+      # Orchestration reconciler heartbeat (the worker has no HTTP server)
+      test: ["CMD", "python", "-m", "app.healthcheck", "reconciler"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # The same worker, drawing Video Studio scene previews and no whole render, so a 4K
+  # render never leaves the previews short of memory. They run every other job too.
+  xtm-one-worker-preview:
+    <<: *xtm-one-worker
+    deploy:
+      mode: replicated
+      replicas: 2
+    environment:
+      <<: *xtm-one-environment
+      WORKER_CONCURRENCY: ${XTM_ONE_WORKER_CONCURRENCY:-20}
+      WORKER_JOB_TIMEOUT: ${XTM_ONE_WORKER_JOB_TIMEOUT:-600}
+      WORKER_SHUTDOWN_GRACE_PERIOD: 20
+      WORKER_TERMINATION_GRACE_SECONDS: 1260
+      VIDEO_STUDIO_RENDER_CONCURRENCY: "0"
+
+networks:
+  opensandbox:
 
 volumes:
   esdata:
