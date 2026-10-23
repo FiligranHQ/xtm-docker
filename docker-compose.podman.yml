@@ -1,4 +1,4 @@
-# Rootless Podman override (CPA lab, Rocky 9.8). Use with:
+# Rootless Podman override (validated on Rocky Linux 9.8, Podman 5.8.2). Use with:
 #   docker-compose -f docker-compose.yml -f docker-compose.podman.yml up -d
 # memlock -1 exceeds the rootless user's hard limit (8192 KB) and the container would
 # fail to start; Elasticsearch runs without it (bootstrap.memory_lock is not set).

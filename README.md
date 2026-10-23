@@ -14,7 +14,7 @@ This repository provides a complete Docker Compose setup for running:
 
 ## Prerequisites
 
-- Docker Engine 20.10+
+- Docker Engine 20.10+ (or rootless Podman 5, see [Rootless Podman](#rootless-podman-rhel--rocky-linux))
 - Docker Compose v2.0+
 - Minimum 16GB RAM (recommended 32GB for production)
 - At least 50GB available disk space
@@ -272,6 +272,47 @@ docker volume rm xtm_pgsqldata xtm_pgsqlxtmonedata
 ```
 
 If you started the new version before dumping, your data is still in the old volumes. The `xtm_pgsqlshareddata` volume then holds the databases the platforms created on that start, with everything written to them since, and removing it deletes those writes for good: if you need any of them, dump both databases from `pgsql` first, with the same `pg_dump` commands. Then run `docker compose down`, remove the `xtm_pgsqlshareddata` volume, check out the previous version of this repository, and follow the steps above.
+
+### Service layout
+
+The compose runs the shared infrastructure in a highly available layout. All of it runs on one host, so it protects against a container failure, not a host failure.
+
+| Component | Services | Notes |
+|-----------|----------|-------|
+| Elasticsearch | `es01`, `es02`, `es03` | 3 master-eligible data nodes in `ELASTIC_CLUSTER_NAME`. OpenCTI uses all three nodes with 1 replica per index. OpenAEV only accepts one URL and uses `es01`. |
+| Redis | `redis-primary`, `redis-replica-1`, `redis-replica-2`, `redis-sentinel-1..3` | Sentinel with a quorum of 2 on master `REDIS_SENTINEL_MASTER_NAME`. OpenCTI and XTM One discover the master through the sentinels. |
+| OpenCTI | `opencti` (front), `opencti-ingest` | The front serves the UI/API and connector registration, with the background managers disabled. The ingest node runs the managers and receives all worker traffic. |
+| OpenCTI workers | `worker` (3 replicas) | Send to `opencti-ingest`. |
+
+## Rootless Podman (RHEL / Rocky Linux)
+
+The stack runs on rootless Podman with SELinux enforcing. This was validated on Rocky Linux 9.8 with Podman 5.8.2, using `docker-compose` as the compose provider.
+
+1. **Prepare the host** once, as the user that will run the stack:
+   ```bash
+   ./scripts/podman-host-prep.sh
+   ```
+   The script:
+   - sets `vm.max_map_count=262144` for Elasticsearch;
+   - preloads the netfilter modules the OpenSandbox egress sidecar needs (a rootless network namespace cannot load them itself);
+   - enables linger and the user's `podman.socket`;
+   - enables `podman-restart.service`. **Without it, rootless Podman does not restart any container after a reboot**, even with `restart: always`.
+
+2. **Point the stack at the Podman socket** in `.env`:
+   ```bash
+   CONTAINER_ENGINE_SOCKET=/run/user/<uid>/podman/podman.sock
+   ```
+
+3. **Start with the Podman override**:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.podman.yml up -d
+   ```
+   The override drops the Elasticsearch `memlock` ulimit (above the rootless hard limit) and gives OpenSandbox the `/.dockerenv` marker it uses to detect that it runs in a container.
+
+Good to know:
+- `xtm-composer` and `opensandbox` run with `label=disable`, so SELinux allows them to use the engine socket. Access to that socket already gives control over the container engine.
+- Named volumes live under `~/.local/share/containers/storage/volumes/` of the rootless user, not under `/var/lib/containers`. Size and back up that path.
+- After a reboot, connectors restart several times until OpenCTI and OpenAEV are healthy. This is expected.
 
 ## Troubleshooting
 
