@@ -9,7 +9,7 @@
 #   composer              XTM Composer, for OpenCTI, OpenAEV or both
 
 # A .env made before the profiles has no COMPOSE_PROFILES: Docker Compose would then start XTM
-# One alone and lose track of the other containers. Every command stops instead, saying what to add.
+# One alone. up, pull and config stop instead, saying what to add; down, stop, ps and logs still work.
 x-profiles-guard: "${COMPOSE_PROFILES?is not set in .env. Add the COMPOSE_PROFILES line of .env.sample to start every module as before, or set it empty to start XTM One alone}"
 
 services:

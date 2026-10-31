@@ -203,7 +203,7 @@ XTM_COMPOSER_OPENCTI_ENABLE=false
 
 XTM Composer manages both platforms: set `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE` to `false` for the one you leave out. With `COMPOSE_PROFILES` set but empty, only XTM One starts.
 
-> **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line. Every `docker compose` command then stops with `required variable COMPOSE_PROFILES is missing a value`, instead of starting XTM One alone. Add this line to your `.env` to keep starting every module, as before:
+> **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line. `docker compose up`, `pull` and `config` then stop with `required variable COMPOSE_PROFILES is missing a value`, instead of starting XTM One alone; `down`, `stop`, `ps` and `logs` keep working on the running containers. Add this line to your `.env` to keep starting every module, as before:
 >
 > ```bash
 > COMPOSE_PROFILES=opencti,opencti-connectors,openaev,openaev-integrations,composer
