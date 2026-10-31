@@ -130,7 +130,7 @@ IMAP_STARTTLS_ENABLE=false
 ### 3. Start the stack
 
 ```bash
-docker compose pull --ignore-pull-failures
+docker compose pull
 docker compose up -d
 ```
 
