@@ -1,3 +1,12 @@
+# XTM One, at the center of the suite, and the services it uses start with every deployment.
+# Elasticsearch and RabbitMQ start with OpenCTI or OpenAEV.
+# The other modules are optional: each has a Compose profile, and COMPOSE_PROFILES in .env
+# lists the ones to start (all of them in .env.sample):
+#   opencti               OpenCTI and its worker
+#   opencti-connectors    the default OpenCTI connectors (needs opencti)
+#   openaev               OpenAEV
+#   openaev-integrations  the default OpenAEV collectors and injectors (needs openaev)
+#   composer              XTM Composer, for OpenCTI, OpenAEV or both
 services:
 
   ###########################
@@ -6,6 +15,7 @@ services:
 
   # Generate RSA key for xtm-composer (PKCS#8 format)
   rsa-key-generator:
+    profiles: ["composer"]
     image: alpine/openssl:latest
     volumes:
       - rsakeys:/keys
@@ -30,6 +40,7 @@ services:
       timeout: 5s
       retries: 3
   elasticsearch:
+    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
     image: elasticsearch:8.19.23
     volumes:
       - esdata:/usr/share/elasticsearch/data
@@ -96,6 +107,7 @@ services:
       timeout: 5s
       retries: 3
   rabbitmq:
+    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
     image: rabbitmq:4.3-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
@@ -120,19 +132,22 @@ services:
   # COMMON                  #
   ###########################
 
+  # Runs the integrations of OpenCTI and OpenAEV: start it with one of them or both. Switch off
+  # the platform you leave out with XTM_COMPOSER_OPENCTI_ENABLE or XTM_COMPOSER_OPENAEV_ENABLE.
   xtm-composer:
+    profiles: ["composer"]
     image: filigran/xtm-composer:latest
     platform: linux/amd64
     environment:
       - MANAGER__ID=${XTM_COMPOSER_ID}
       - MANAGER__NAME=OpenCTI Connector Manager
       - MANAGER__CREDENTIALS_KEY_FILEPATH=/keys/private_key.pem
-      - OPENCTI__ENABLE=true
+      - OPENCTI__ENABLE=${XTM_COMPOSER_OPENCTI_ENABLE:-true}
       - OPENCTI__URL=http://opencti:8080
       - OPENCTI__TOKEN=${OPENCTI_ADMIN_TOKEN}
       - OPENCTI__DAEMON__SELECTOR=docker
       - OPENCTI__DAEMON__DOCKER__NETWORK_MODE=${COMPOSE_PROJECT_NAME}_default
-      - OPENAEV__ENABLE=true
+      - OPENAEV__ENABLE=${XTM_COMPOSER_OPENAEV_ENABLE:-true}
       - OPENAEV__URL=http://openaev:8080
       - OPENAEV__TOKEN=${OPENAEV_ADMIN_TOKEN}
       - OPENAEV__DAEMON__SELECTOR=docker
@@ -145,8 +160,13 @@ services:
         condition: service_healthy
       opencti:
         condition: service_healthy
+        required: false # when OpenCTI is left out
+      openaev:
+        condition: service_healthy
+        required: false # when OpenAEV is left out
       rabbitmq:
         condition: service_healthy
+        required: false
     restart: always
 
   ###########################
@@ -154,6 +174,7 @@ services:
   ###########################
 
   opencti:
+    profiles: ["opencti"]
     image: opencti/platform:latest
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
@@ -208,6 +229,7 @@ services:
       timeout: 5s
       retries: 20
   worker:
+    profiles: ["opencti"]
     image: opencti/worker:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -225,6 +247,7 @@ services:
   ###########################
 
   connector-export-file-stix:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-export-file-stix:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -238,6 +261,7 @@ services:
       opencti:
         condition: service_healthy
   connector-export-file-csv:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-export-file-csv:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -251,6 +275,7 @@ services:
       opencti:
         condition: service_healthy
   connector-export-file-txt:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-export-file-txt:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -264,6 +289,7 @@ services:
       opencti:
         condition: service_healthy
   connector-import-file-stix:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-import-file-stix:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -279,6 +305,7 @@ services:
       opencti:
         condition: service_healthy
   connector-import-document:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-import-document:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -296,6 +323,7 @@ services:
       opencti:
         condition: service_healthy
   connector-import-file-yara:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-import-file-yara:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -311,6 +339,7 @@ services:
       opencti:
         condition: service_healthy
   connector-analysis:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-import-document:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -327,6 +356,7 @@ services:
       opencti:
         condition: service_healthy
   connector-import-external-reference:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-import-external-reference:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -343,6 +373,7 @@ services:
   ###########################
 
   connector-opencti:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-opencti:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -357,6 +388,7 @@ services:
       opencti:
         condition: service_healthy      
   connector-mitre:
+    profiles: ["opencti-connectors"]
     image: opencti/connector-mitre:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
@@ -374,6 +406,7 @@ services:
   ###########################
 
   openaev:
+    profiles: ["openaev"]
     image: openaev/platform:latest
     environment:
       - OPENAEV_BASE-URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
@@ -449,6 +482,7 @@ services:
   ###########################
 
   collector-mitre-attack:
+    profiles: ["openaev-integrations"]
     image: openaev/collector-mitre-attack:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -460,6 +494,7 @@ services:
         condition: service_healthy
     restart: always
   collector-openaev:
+    profiles: ["openaev-integrations"]
     image: openaev/collector-openaev:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -471,6 +506,7 @@ services:
         condition: service_healthy
     restart: always
   collector-atomic-red-team:
+    profiles: ["openaev-integrations"]
     image: openaev/collector-atomic-red-team:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -482,6 +518,7 @@ services:
         condition: service_healthy
     restart: always
   collector-nvd-nist-cve:
+    profiles: ["openaev-integrations"]
     image: openaev/collector-nvd-nist-cve:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -499,6 +536,7 @@ services:
   ###########################
       
   injector-nmap:
+    profiles: ["openaev-integrations"]
     image: openaev/injector-nmap:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -510,6 +548,7 @@ services:
         condition: service_healthy
     restart: always
   injector-nuclei:
+    profiles: ["openaev-integrations"]
     image: openaev/injector-nuclei:latest
     environment:
       - OPENAEV_URL=http://openaev:8080
@@ -555,6 +594,8 @@ services:
     restart: "no"
 
   xtm-one:
+    # Published for linux/amd64 only: runs through emulation on ARM (Rosetta on Docker Desktop)
+    platform: linux/amd64
     image: xtmone/platform:latest
     environment:
       - PLATFORM_MODE=xtm_one
@@ -599,6 +640,8 @@ services:
       start_period: 60s
 
   xtm-one-worker:
+    # Published for linux/amd64 only: runs through emulation on ARM (Rosetta on Docker Desktop)
+    platform: linux/amd64
     image: xtmone/worker:latest
     environment:
       - PLATFORM_MODE=xtm_one

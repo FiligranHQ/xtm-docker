@@ -18,6 +18,7 @@ This repository provides a complete Docker Compose setup for running:
 - Docker Compose v2.0+
 - Minimum 16GB RAM (recommended 32GB for production)
 - At least 50GB available disk space
+- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
 
 ## Architecture
 
@@ -129,8 +130,11 @@ IMAP_STARTTLS_ENABLE=false
 ### 3. Start the stack
 
 ```bash
+docker compose pull --ignore-pull-failures
 docker compose up -d
 ```
+
+Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. XTM One always starts; the optional modules started with it are the profiles listed in `COMPOSE_PROFILES` (all of them in `.env.sample`, see [Choose the modules](#choose-the-modules)).
 
 ### 4. Access the platforms
 
@@ -177,6 +181,29 @@ Once all services are healthy (this may take a few minutes on first start):
 | Nuclei | Vulnerability scanning with Nuclei |
 
 ## Configuration
+
+### Choose the modules
+
+XTM One, at the center of the suite, always starts with the services it uses (PostgreSQL, Redis, Silo). Each other module has a Compose profile; `COMPOSE_PROFILES` in `.env` lists the ones to start.
+
+| Profile | Starts | Needs |
+|---------|--------|-------|
+| `opencti` | OpenCTI and its worker, with Elasticsearch and RabbitMQ | |
+| `opencti-connectors` | The default OpenCTI connectors | `opencti` |
+| `openaev` | OpenAEV, with Elasticsearch and RabbitMQ | |
+| `openaev-integrations` | The default OpenAEV collectors and injectors | `openaev` |
+| `composer` | XTM Composer, which deploys integrations from the platforms' interface | `opencti` or `openaev` |
+
+For example, XTM One with OpenAEV and XTM Composer:
+
+```bash
+COMPOSE_PROFILES=openaev,openaev-integrations,composer
+XTM_COMPOSER_OPENCTI_ENABLE=false
+```
+
+XTM Composer manages both platforms: set `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE` to `false` for the one you leave out. With `COMPOSE_PROFILES` empty, only XTM One starts.
+
+> **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line, and `docker compose up -d` would then start XTM One only. Add the `COMPOSE_PROFILES` line and the two `XTM_COMPOSER_*_ENABLE` lines from `.env.sample` to keep starting every module.
 
 ### Memory Requirements
 
