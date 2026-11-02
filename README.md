@@ -62,7 +62,11 @@ graph TB
 
 | File | Services |
 |------|----------|
-| `infra/infra.yml` | Redis, Elasticsearch, PostgreSQL + pgvector, Silo, RabbitMQ (with `infra/rabbitmq.conf`) |
+| `infra/redis.yml` | Redis |
+| `infra/elasticsearch.yml` | Elasticsearch |
+| `infra/postgresql.yml` | PostgreSQL + pgvector |
+| `infra/silo.yml` | Silo (S3) |
+| `infra/rabbitmq.yml` | RabbitMQ, with `infra/rabbitmq.conf` |
 | `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
 | `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
 | `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |

@@ -12,10 +12,22 @@
 # One alone. up, pull and config stop instead, saying what to add.
 x-profiles-guard: "${COMPOSE_PROFILES?is not set in .env. Add the COMPOSE_PROFILES line of .env.sample to start every module as before, or set it empty to start XTM One alone}"
 
-# infra/ holds the shared services, modules/ one file per product.
 include:
-  - infra/infra.yml
-  - modules/xtm-one.yml
-  - modules/opencti.yml
-  - modules/openaev.yml
-  - modules/xtm-composer.yml
+  - path: infra/redis.yml
+    project_directory: .
+  - path: infra/elasticsearch.yml
+    project_directory: .
+  - path: infra/postgresql.yml
+    project_directory: .
+  - path: infra/silo.yml
+    project_directory: .
+  - path: infra/rabbitmq.yml
+    project_directory: .
+  - path: modules/xtm-one.yml
+    project_directory: .
+  - path: modules/opencti.yml
+    project_directory: .
+  - path: modules/openaev.yml
+    project_directory: .
+  - path: modules/xtm-composer.yml
+    project_directory: .

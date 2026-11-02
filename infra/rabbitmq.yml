@@ -1,0 +1,26 @@
+services:
+
+  rabbitmq:
+    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
+    image: rabbitmq:4.3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=rabbit01@localhost
+    ports:
+      - "5672:5672"
+      - "15672:15672"      
+    volumes:
+      - type: bind
+        source: ./infra/rabbitmq.conf
+        target: /etc/rabbitmq/rabbitmq.conf 
+      - amqpdata:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+volumes:
+  amqpdata:
