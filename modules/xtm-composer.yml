@@ -1,0 +1,56 @@
+services:
+
+  # Generate RSA key for xtm-composer (PKCS#8 format)
+  rsa-key-generator:
+    profiles: ["opencti", "openaev"] # starts with OpenCTI, OpenAEV or both
+    image: alpine/openssl:latest
+    volumes:
+      - rsakeys:/keys
+    entrypoint: ["/bin/ash"]
+    command: ["-c", "if [ ! -f /keys/private_key.pem ]; then openssl genpkey -algorithm RSA -out /keys/private_key.pem -pkeyopt rsa_keygen_bits:4096; fi && tail -f /dev/null"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/keys/private_key.pem"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  # Runs the integrations of OpenCTI and OpenAEV, and starts with one of them or both. Switch off
+  # the platform you leave out with XTM_COMPOSER_OPENCTI_ENABLE or XTM_COMPOSER_OPENAEV_ENABLE.
+  xtm-composer:
+    profiles: ["opencti", "openaev"] # starts with OpenCTI, OpenAEV or both
+    image: filigran/xtm-composer:latest
+    platform: linux/amd64
+    environment:
+      - MANAGER__ID=${XTM_COMPOSER_ID}
+      - MANAGER__NAME=OpenCTI Connector Manager
+      - MANAGER__CREDENTIALS_KEY_FILEPATH=/keys/private_key.pem
+      - OPENCTI__ENABLE=${XTM_COMPOSER_OPENCTI_ENABLE:-true}
+      - OPENCTI__URL=http://opencti:8080
+      - OPENCTI__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - OPENCTI__DAEMON__SELECTOR=docker
+      - OPENCTI__DAEMON__DOCKER__NETWORK_MODE=${COMPOSE_PROJECT_NAME}_default
+      - OPENAEV__ENABLE=${XTM_COMPOSER_OPENAEV_ENABLE:-true}
+      - OPENAEV__URL=http://openaev:8080
+      - OPENAEV__TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - OPENAEV__DAEMON__SELECTOR=docker
+      - OPENAEV__DAEMON__DOCKER__NETWORK_MODE=${COMPOSE_PROJECT_NAME}_default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - rsakeys:/keys:ro  # RSA key mounted as read-only
+    depends_on:
+      rsa-key-generator:
+        condition: service_healthy
+      opencti:
+        condition: service_healthy
+        required: false # when OpenCTI is left out
+      openaev:
+        condition: service_healthy
+        required: false # when OpenAEV is left out
+      rabbitmq:
+        condition: service_healthy
+        required: false
+    restart: always
+
+volumes:
+  rsakeys:

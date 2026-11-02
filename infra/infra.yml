@@ -1,0 +1,113 @@
+services:
+
+  ###########################
+  # DEPENDENCIES            #
+  ###########################
+
+  redis:
+    image: redis:8.8.3
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  elasticsearch:
+    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
+    image: elasticsearch:8.19.23
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    environment:
+      # Comment-out the line below for a cluster of multiple nodes
+      - discovery.type=single-node
+      # Uncomment the line below below for a cluster of multiple nodes
+      # - cluster.name=docker-cluster
+      - xpack.ml.enabled=false
+      - xpack.security.enabled=false
+      - thread_pool.search.queue_size=5000
+      - logger.org.elasticsearch.discovery="ERROR"
+      - "ES_JAVA_OPTS=-Xms${ELASTIC_MEMORY_SIZE} -Xmx${ELASTIC_MEMORY_SIZE}"
+    ports:
+      - "9200:9200"
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://elasticsearch:9200/_cluster/health?wait_for_status=yellow >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 50
+  pgsql:
+    # Shared by OpenAEV (openaev database) and XTM One (xtm_one database, created by
+    # xtm-one-db-init). XTM One needs the pgvector extension.
+    image: pgvector/pgvector:pg17
+    # OpenAEV (up to 20 connections) and XTM One (up to 35 per process, tracing pool
+    # included, over 2 web workers and its worker) exceed the default of 100
+    command: ["postgres", "-c", "max_connections=200"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: openaev
+    volumes:
+      - pgsqlshareddata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      # Over TCP: on the first start, the temporary server that initialises the volume
+      # listens on the Unix socket only, and every client connects over TCP
+      test: [ "CMD", "pg_isready", "-h", "localhost", "-U", "${POSTGRES_USER}", "-d", "openaev" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  minio:
+    image: pgsty/silo:latest
+    volumes:
+      - s3data:/data
+    ports:
+      - "9000:9000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}    
+    command: server /data
+    restart: always
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  rabbitmq:
+    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
+    image: rabbitmq:4.3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=rabbit01@localhost
+    ports:
+      - "5672:5672"
+      - "15672:15672"      
+    volumes:
+      - type: bind
+        source: ./rabbitmq.conf
+        target: /etc/rabbitmq/rabbitmq.conf 
+      - amqpdata:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+volumes:
+  esdata:
+  pgsqlshareddata:
+  s3data:
+  redisdata:
+  amqpdata:

@@ -58,6 +58,16 @@ graph TB
     XTMOne --> PG
 ```
 
+`docker-compose.yml` includes one file per part of the stack:
+
+| File | Services |
+|------|----------|
+| `infra/infra.yml` | Redis, Elasticsearch, PostgreSQL + pgvector, Silo, RabbitMQ (with `infra/rabbitmq.conf`) |
+| `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
+| `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
+| `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
+| `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
+
 ## Quick Start
 
 ### 1. Clone the repository
@@ -191,12 +201,11 @@ XTM One, at the center of the suite, always starts with the services it uses (Po
 | `opencti-connectors` | The default OpenCTI connectors | `opencti` |
 | `openaev` | OpenAEV, with Elasticsearch and RabbitMQ | |
 | `openaev-integrations` | The default OpenAEV collectors and injectors | `openaev` |
-| `composer` | XTM Composer, which deploys integrations from the platforms' interface | `opencti` or `openaev` |
 
-For example, XTM One with OpenAEV and XTM Composer:
+XTM Composer, which deploys integrations from the platforms' interface, has no profile of its own: it starts with `opencti`, `openaev` or both. For example, XTM One with OpenAEV, its default integrations and XTM Composer:
 
 ```bash
-COMPOSE_PROFILES=openaev,openaev-integrations,composer
+COMPOSE_PROFILES=openaev,openaev-integrations
 XTM_COMPOSER_OPENCTI_ENABLE=false
 ```
 
@@ -205,7 +214,7 @@ XTM Composer manages both platforms: set `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_C
 > **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line. `docker compose up`, `pull` and `config` then stop with `required variable COMPOSE_PROFILES is missing a value`, instead of starting XTM One alone. Add the line before anything else: `down` and `stop` act only on XTM One and the services of the active profiles, so without the line they would leave OpenCTI and OpenAEV running (`docker compose --profile '*' down` stops every service). Add this line to your `.env` to keep starting every module, as before:
 >
 > ```bash
-> COMPOSE_PROFILES=opencti,opencti-connectors,openaev,openaev-integrations,composer
+> COMPOSE_PROFILES=opencti,opencti-connectors,openaev,openaev-integrations
 > ```
 >
 > The two `XTM_COMPOSER_*_ENABLE` variables default to `true` and can stay out.
@@ -222,7 +231,7 @@ Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
 
 ### Scaling Workers
 
-Modify the worker replicas in `docker-compose.yml`:
+Modify the worker replicas in `modules/opencti.yml`:
 
 ```yaml
 worker:
