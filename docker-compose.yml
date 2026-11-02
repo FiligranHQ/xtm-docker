@@ -1,13 +1,3 @@
-# XTM One, at the center of the suite, and the services it uses start with every deployment.
-# Elasticsearch and RabbitMQ start with OpenCTI or OpenAEV, and XTM Composer with OpenCTI,
-# OpenAEV or both.
-# The other modules are optional: each has a Compose profile, and COMPOSE_PROFILES in .env
-# lists the ones to start (all of them in .env.sample):
-#   opencti               OpenCTI and its worker
-#   opencti-connectors    the default OpenCTI connectors (needs opencti)
-#   openaev               OpenAEV
-#   openaev-integrations  the default OpenAEV collectors and injectors (needs openaev)
-
 # A .env made before the profiles has no COMPOSE_PROFILES: Docker Compose would then start XTM
 # One alone. up, pull and config stop instead, saying what to add.
 x-profiles-guard: "${COMPOSE_PROFILES?is not set in .env. Add the COMPOSE_PROFILES line of .env.sample to start every module as before, or set it empty to start XTM One alone}"
