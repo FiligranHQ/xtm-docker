@@ -29,14 +29,14 @@
     // vulnerabilityAlerts is disabled since it can cause problems by skipping minimumReleaseAge, schedule and others constraints
     enabled: false,
   },
-  // major versions of the external images are held back: a major upgrade is a deliberate change of this file
+  // the external images are held back as in OpenCTI: an upgrade beyond the allowed versions is a deliberate change of this file
   packageRules: [
     {
       matchDatasources: [
         'docker',
       ],
       matchPackageNames: [
-        'docker.elastic.co/elasticsearch/elasticsearch',
+        'elasticsearch',
       ],
       allowedVersions: '<9',
       description: 'Keep elasticsearch docker image at version 8.x',
@@ -48,8 +48,8 @@
       matchPackageNames: [
         'redis',
       ],
-      allowedVersions: '<9',
-      description: 'Keep redis docker image at version 8.x',
+      allowedVersions: '<8.9',
+      description: 'Keep redis docker image at version 8.8.x',
     },
     {
       matchDatasources: [
@@ -58,8 +58,8 @@
       matchPackageNames: [
         'rabbitmq',
       ],
-      allowedVersions: '<5',
-      description: 'Keep rabbitmq docker image at version 4.x',
+      allowedVersions: '<4.4',
+      description: 'Keep rabbitmq docker image at version 4.3.x',
     },
   ],
 }
