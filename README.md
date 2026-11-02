@@ -14,8 +14,7 @@ This repository provides a complete Docker Compose setup for running:
 
 ## Prerequisites
 
-- Docker Engine 20.10+
-- Docker Compose v2.0+
+- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
 - Minimum 16GB RAM (recommended 32GB for production)
 - At least 50GB available disk space
 - On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
