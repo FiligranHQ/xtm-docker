@@ -1,0 +1,65 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    'docker:enableMajor',
+    ':semanticCommits',
+  ],
+  labels: [
+    'dependencies',
+    'filigran team',
+  ],
+  minimumReleaseAge: '3 days',
+  // high limits so that all PRs are created at once during the schedule window rather than being drip-fed across multiple runs
+  prHourlyLimit: 100,
+  prConcurrentLimit: 100,
+  branchConcurrentLimit: 100,
+  timezone: 'Europe/Paris',
+  // weekdays outside working hours (22h-5h) + all weekend
+  schedule: [
+    '* 0-4,22-23 * * 1-5',
+    '* * * * 0,6',
+  ],
+  // prevent Renovate from updating existing PRs outside the schedule window
+  updateNotScheduled: false,
+  // only rebase when there is a conflict; avoids unnecessary CI runs on every base branch change
+  rebaseWhen: 'conflicted',
+  vulnerabilityAlerts: {
+    // as we don't rely on Renovate to be informed of dependency security advisories,
+    // vulnerabilityAlerts is disabled since it can cause problems by skipping minimumReleaseAge, schedule and others constraints
+    enabled: false,
+  },
+  // the external images are held back as in OpenCTI: an upgrade beyond the allowed versions is a deliberate change of this file
+  packageRules: [
+    {
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'elasticsearch',
+      ],
+      allowedVersions: '<9',
+      description: 'Keep elasticsearch docker image at version 8.x',
+    },
+    {
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'redis',
+      ],
+      allowedVersions: '<8.9',
+      description: 'Keep redis docker image at version 8.8.x',
+    },
+    {
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'rabbitmq',
+      ],
+      allowedVersions: '<4.4',
+      description: 'Keep rabbitmq docker image at version 4.3.x',
+    },
+  ],
+}
