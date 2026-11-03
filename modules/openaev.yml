@@ -1,0 +1,160 @@
+services:
+
+  ###########################
+  # OPENAEV                 #
+  ###########################
+
+  openaev:
+    profiles: ["openaev"]
+    image: openaev/platform:latest
+    environment:
+      - OPENAEV_BASE-URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
+      - OPENAEV_AUTH-LOCAL-ENABLE=true
+      - OPENAEV_ADMIN_EMAIL=${OPENAEV_ADMIN_EMAIL}
+      - OPENAEV_ADMIN_PASSWORD=${OPENAEV_ADMIN_PASSWORD}
+      - OPENAEV_ADMIN_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - OPENAEV_HEALTHCHECK_KEY=${OPENAEV_HEALTHCHECK_KEY:-ChangeMe}
+      - OPENAEV_ADMIN_ENCRYPTION_KEY=${OPENAEV_ADMIN_ENCRYPTION_KEY}
+      - OPENAEV_ADMIN_ENCRYPTION_SALT=${OPENAEV_ADMIN_ENCRYPTION_SALT}
+      - OPENAEV_EXTRA-TRUSTED-CERTS-DIR=/opt/openaev/additional_certs
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pgsql:5432/openaev
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - MINIO_ENDPOINT=minio
+      - MINIO_ACCESS-KEY=${MINIO_ROOT_USER}
+      - MINIO_ACCESS-SECRET=${MINIO_ROOT_PASSWORD}
+      - OPENAEV_RABBITMQ_HOSTNAME=rabbitmq
+      - OPENAEV_RABBITMQ_USER=${RABBITMQ_DEFAULT_USER}
+      - OPENAEV_RABBITMQ_PASS=${RABBITMQ_DEFAULT_PASS}
+      - ENGINE_URL=http://elasticsearch:9200
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - MANAGEMENT_HEALTH_MAIL_ENABLED=false
+      - SPRING_MAIL_HOST=${SMTP_HOST}
+      - SPRING_MAIL_PORT=${SMTP_PORT}
+      - SPRING_MAIL_USERNAME=${SMTP_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SMTP_PASSWORD}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${SMTP_AUTH}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=${SMTP_SSL_ENABLE}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=*
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${SMTP_STARTTLS_ENABLE}
+      - OPENAEV_MAIL_IMAP_ENABLED=${OPENAEV_MAIL_IMAP_ENABLED}
+      - OPENAEV_MAIL_IMAP_HOST=${IMAP_HOST}
+      - OPENAEV_MAIL_IMAP_PORT=${IMAP_PORT}
+      - OPENAEV_MAIL_IMAP_USERNAME=${IMAP_USERNAME}
+      - OPENAEV_MAIL_IMAP_PASSWORD=${IMAP_PASSWORD}
+      - OPENAEV_MAIL_IMAP_AUTH=${IMAP_AUTH}
+      - OPENAEV_MAIL_IMAP_SSL_ENABLE=${IMAP_SSL_ENABLE}
+      - OPENAEV_MAIL_IMAP_SSL_TRUST=*
+      - OPENAEV_MAIL_IMAP_STARTTLS_ENABLE=${IMAP_STARTTLS_ENABLE}
+      # OpenCTI
+      - OPENAEV_XTM_OPENCTI_ENABLE=true
+      - OPENAEV_XTM_OPENCTI_URL=${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}
+      # Spring @Value does not relax-bind env vars to hyphenated property
+      # names (`openaev.xtm.opencti.api-url`), so we inject it via
+      # SPRING_APPLICATION_JSON instead of an env var with a hyphen.
+      - SPRING_APPLICATION_JSON={"openaev":{"xtm":{"opencti":{"api-url":"http://opencti:8080/graphql"}}}}
+      - OPENAEV_XTM_OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      # XTM One
+      - OPENAEV_XTM_ONE_URL=http://xtm-one:4000
+      - OPENAEV_XTM_ONE_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+    ports:
+      - "8081:8080" # If you change the host port (the left one) do not forget to update OPENAEV_BASE-URL in you .env
+    depends_on:
+      pgsql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://openaev:8080/api/health?health_access_key=${OPENAEV_HEALTHCHECK_KEY}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
+  ###########################
+  # OPENAEV COLLECTORS      #
+  ###########################
+
+  collector-mitre-attack:
+    profiles: ["openaev-integrations"]
+    image: openaev/collector-mitre-attack:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - COLLECTOR_ID=${COLLECTOR_MITRE_ATTACK_ID} # Valid UUIDv4
+      - "COLLECTOR_NAME=MITRE ATT&CK"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always
+  collector-openaev:
+    profiles: ["openaev-integrations"]
+    image: openaev/collector-openaev:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - COLLECTOR_ID=${COLLECTOR_OPENAEV_ID} # Valid UUIDv4
+      - "COLLECTOR_NAME=OpenAEV Datasets"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always
+  collector-atomic-red-team:
+    profiles: ["openaev-integrations"]
+    image: openaev/collector-atomic-red-team:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - COLLECTOR_ID=${COLLECTOR_ATOMIC_RED_TEAM_ID} # Valid UUIDv4
+      - "COLLECTOR_NAME=Atomic Red Team"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always
+  collector-nvd-nist-cve:
+    profiles: ["openaev-integrations"]
+    image: openaev/collector-nvd-nist-cve:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - COLLECTOR_ID=${COLLECTOR_NVD_NIST_CVE_ID} # Valid UUIDv4
+      - NVD_NIST_CVE_API_KEY=${COLLECTOR_NVD_NIST_CVE_API_KEY}
+      - "COLLECTOR_NAME=CVE by NVD NIST"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always
+
+  ###########################
+  # OPENAEV INJECTORS       #
+  ###########################
+      
+  injector-nmap:
+    profiles: ["openaev-integrations"]
+    image: openaev/injector-nmap:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - INJECTOR_ID=${INJECTOR_NMAP_ID} # Valid UUIDv4
+      - "INJECTOR_NAME=Nmap"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always
+  injector-nuclei:
+    profiles: ["openaev-integrations"]
+    image: openaev/injector-nuclei:latest
+    environment:
+      - OPENAEV_URL=http://openaev:8080
+      - OPENAEV_TOKEN=${OPENAEV_ADMIN_TOKEN}
+      - INJECTOR_ID=${INJECTOR_NUCLEI_ID} # Valid UUIDv4
+      - "INJECTOR_NAME=Nuclei"
+    depends_on:
+      openaev:
+        condition: service_healthy
+    restart: always

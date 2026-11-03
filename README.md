@@ -14,10 +14,10 @@ This repository provides a complete Docker Compose setup for running:
 
 ## Prerequisites
 
-- Docker Engine 20.10+
-- Docker Compose v2.0+
+- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
 - Minimum 16GB RAM (recommended 32GB for production)
 - At least 50GB available disk space
+- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
 
 ## Architecture
 
@@ -57,6 +57,20 @@ graph TB
     XTMOne --> Redis
     XTMOne --> PG
 ```
+
+`docker-compose.yml` includes one file per part of the stack:
+
+| File | Services |
+|------|----------|
+| `infra/redis.yml` | Redis |
+| `infra/elasticsearch.yml` | Elasticsearch |
+| `infra/postgresql.yml` | PostgreSQL + pgvector |
+| `infra/silo.yml` | Silo (S3) |
+| `infra/rabbitmq.yml` | RabbitMQ, with `infra/rabbitmq.conf` |
+| `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
+| `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
+| `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
+| `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
 ## Quick Start
 
@@ -129,8 +143,11 @@ IMAP_STARTTLS_ENABLE=false
 ### 3. Start the stack
 
 ```bash
+docker compose pull
 docker compose up -d
 ```
+
+Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. XTM One always starts; the optional modules started with it are the profiles listed in `COMPOSE_PROFILES` (all of them in `.env.sample`, see [Choose the modules](#choose-the-modules)).
 
 ### 4. Access the platforms
 
@@ -178,6 +195,34 @@ Once all services are healthy (this may take a few minutes on first start):
 
 ## Configuration
 
+### Choose the modules
+
+XTM One, at the center of the suite, always starts with the services it uses (PostgreSQL, Redis, Silo). Each other module has a Compose profile; `COMPOSE_PROFILES` in `.env` lists the ones to start.
+
+| Profile | Starts | Needs |
+|---------|--------|-------|
+| `opencti` | OpenCTI and its worker, with Elasticsearch and RabbitMQ | |
+| `opencti-connectors` | The default OpenCTI connectors | `opencti` |
+| `openaev` | OpenAEV, with Elasticsearch and RabbitMQ | |
+| `openaev-integrations` | The default OpenAEV collectors and injectors | `openaev` |
+
+XTM Composer, which deploys integrations from the platforms' interface, has no profile of its own: it starts with `opencti`, `openaev` or both. For example, XTM One with OpenAEV, its default integrations and XTM Composer:
+
+```bash
+COMPOSE_PROFILES=openaev,openaev-integrations
+XTM_COMPOSER_OPENCTI_ENABLE=false
+```
+
+XTM Composer manages both platforms: set `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE` to `false` for the one you leave out. With `COMPOSE_PROFILES` set but empty, only XTM One starts. Removing a profile does not stop the containers already running: stop them with `docker compose --profile <profile> stop`.
+
+> **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line. `docker compose up`, `pull` and `config` then stop with `required variable COMPOSE_PROFILES is missing a value`, instead of starting XTM One alone. Add the line before anything else: `down` and `stop` act only on XTM One and the services of the active profiles, so without the line they would leave OpenCTI and OpenAEV running (`docker compose --profile '*' down` stops every service). Add this line to your `.env` to keep starting every module, as before:
+>
+> ```bash
+> COMPOSE_PROFILES=opencti,opencti-connectors,openaev,openaev-integrations
+> ```
+>
+> The two `XTM_COMPOSER_*_ENABLE` variables default to `true` and can stay out.
+
 ### Memory Requirements
 
 Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
@@ -190,7 +235,7 @@ Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
 
 ### Scaling Workers
 
-Modify the worker replicas in `docker-compose.yml`:
+Modify the worker replicas in `modules/opencti.yml`:
 
 ```yaml
 worker:
