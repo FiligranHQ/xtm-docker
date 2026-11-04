@@ -10,7 +10,7 @@ This repository provides a complete Docker Compose setup for running:
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV and XTM One)
+- **Shared Infrastructure** — Elasticsearch, RustFS (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV and XTM One)
 
 ## Prerequisites
 
@@ -39,21 +39,21 @@ graph TB
 
     subgraph Shared["Shared Infrastructure"]
         ES[("Elasticsearch")]
-        Silo[("Silo (S3)")]
+        RustFS[("RustFS (S3)")]
         RabbitMQ[("RabbitMQ")]
         Redis[("Redis")]
         PG[("PostgreSQL + pgvector")]
     end
 
     OpenCTI --> ES
-    OpenCTI --> Silo
+    OpenCTI --> RustFS
     OpenCTI --> RabbitMQ
     OpenCTI --> Redis
     OpenAEV --> ES
-    OpenAEV --> Silo
+    OpenAEV --> RustFS
     OpenAEV --> RabbitMQ
     OpenAEV --> PG
-    XTMOne --> Silo
+    XTMOne --> RustFS
     XTMOne --> Redis
     XTMOne --> PG
 ```
@@ -76,7 +76,7 @@ Create a `.env` file with the required configuration. An example is available in
 POSTGRES_USER=openaev
 POSTGRES_PASSWORD=<generate-strong-password>
 
-# Silo (S3 object storage, the variables keep their MINIO_ prefix)
+# RustFS (S3 object storage, the variables keep their MINIO_ prefix)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=<generate-strong-password>
 
@@ -127,6 +127,8 @@ IMAP_STARTTLS_ENABLE=false
 > The full XTM One configuration (admin credentials, image tag, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
 
 ### 3. Start the stack
+
+Updating a stack that ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: its first steps run before the `git pull`.
 
 ```bash
 docker compose up -d
@@ -246,7 +248,7 @@ docker compose down -v
 
 ### Upgrade from separate PostgreSQL instances
 
-Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
+Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. These versions also ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: the storage has to be moved too before the final `docker compose up -d`. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
 
 ```bash
 docker compose stop openaev xtm-one xtm-one-worker
@@ -272,6 +274,16 @@ docker volume rm xtm_pgsqldata xtm_pgsqlxtmonedata
 ```
 
 If you started the new version before dumping, your data is still in the old volumes. The `xtm_pgsqlshareddata` volume then holds the databases the platforms created on that start, with everything written to them since, and removing it deletes those writes for good: if you need any of them, dump both databases from `pgsql` first, with the same `pg_dump` commands. Then run `docker compose down`, remove the `xtm_pgsqlshareddata` volume, check out the previous version of this repository, and follow the steps above.
+
+### Upgrade a stack that ran MinIO or Silo
+
+The `minio` service runs [RustFS](https://rustfs.com), an open source (Apache 2.0) S3-compatible object storage. The service name, the `s3data` volume and the `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` variables keep their former names, so the OpenCTI, OpenAEV and XTM One settings do not change.
+
+RustFS does not start on an `s3data` volume written by MinIO or Silo (`Permission denied`: that volume belongs to root, RustFS runs as uid 10001). The volume (`xtm_s3data` with the project name of `.env.sample`) holds the buckets of OpenCTI, OpenAEV and XTM One. Back it up and move it with the migration guide listed in the [breaking changes of the OpenCTI documentation](https://docs.opencti.io/latest/deployment/breaking-changes/) (the [OpenAEV breaking changes](https://docs.openaev.io/latest/deployment/breaking-changes/) list the same move) before the next `docker compose up -d` with this compose file, then check a file in each platform. The guide's first steps run with the previous compose file: if you update this clone with `git pull`, run them before the pull.
+
+If your stack ran a `pgsql-xtm-one` container (separate PostgreSQL instances), follow [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) too: dump the databases and back up the storage volume before the pull, and start the stack only once the databases are restored and the storage is moved.
+
+Started without moving the storage: `docker compose up -d` stops on the unhealthy `minio` service (`docker compose logs minio` shows `Permission denied`), and the data of the volume is unchanged. The guide explains how to go back to the previous storage service. If your stack ran a `pgsql-xtm-one` container, read the last paragraph of [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) before running `docker compose up -d` again.
 
 ## Troubleshooting
 
