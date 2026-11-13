@@ -147,7 +147,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. XTM One always starts; the optional modules started with it are the profiles listed in `COMPOSE_PROFILES` (all of them in `.env.sample`, see [Choose the modules](#choose-the-modules)).
+Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
 ### 4. Access the platforms
 
@@ -195,33 +195,9 @@ Once all services are healthy (this may take a few minutes on first start):
 
 ## Configuration
 
-### Choose the modules
+### Existing deployments
 
-XTM One, at the center of the suite, always starts with the services it uses (PostgreSQL, Redis, Silo). Each other module has a Compose profile; `COMPOSE_PROFILES` in `.env` lists the ones to start.
-
-| Profile | Starts | Needs |
-|---------|--------|-------|
-| `opencti` | OpenCTI and its worker, with Elasticsearch and RabbitMQ | |
-| `opencti-connectors` | The default OpenCTI connectors | `opencti` |
-| `openaev` | OpenAEV, with Elasticsearch and RabbitMQ | |
-| `openaev-integrations` | The default OpenAEV collectors and injectors | `openaev` |
-
-XTM Composer, which deploys integrations from the platforms' interface, has no profile of its own: it starts with `opencti`, `openaev` or both. For example, XTM One with OpenAEV, its default integrations and XTM Composer:
-
-```bash
-COMPOSE_PROFILES=openaev,openaev-integrations
-XTM_COMPOSER_OPENCTI_ENABLE=false
-```
-
-XTM Composer manages both platforms: set `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE` to `false` for the one you leave out. With `COMPOSE_PROFILES` set but empty, only XTM One starts. Removing a profile does not stop the containers already running: stop them with `docker compose --profile <profile> stop`.
-
-> **Existing deployments:** a `.env` created before the profiles has no `COMPOSE_PROFILES` line. `docker compose up`, `pull` and `config` then stop with `required variable COMPOSE_PROFILES is missing a value`, instead of starting XTM One alone. Add the line before anything else: `down` and `stop` act only on XTM One and the services of the active profiles, so without the line they would leave OpenCTI and OpenAEV running (`docker compose --profile '*' down` stops every service). Add this line to your `.env` to keep starting every module, as before:
->
-> ```bash
-> COMPOSE_PROFILES=opencti,opencti-connectors,openaev,openaev-integrations
-> ```
->
-> The two `XTM_COMPOSER_*_ENABLE` variables default to `true` and can stay out.
+A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`.
 
 ### Memory Requirements
 

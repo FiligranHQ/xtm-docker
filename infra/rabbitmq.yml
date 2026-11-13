@@ -1,7 +1,6 @@
 services:
 
   rabbitmq:
-    profiles: ["opencti", "openaev"] # used by OpenCTI and OpenAEV only
     image: rabbitmq:4.3-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}

@@ -1,7 +1,3 @@
-# A .env made before the profiles has no COMPOSE_PROFILES: Docker Compose would then start XTM
-# One alone. up, pull and config stop instead, saying what to add.
-x-profiles-guard: "${COMPOSE_PROFILES?is not set in .env. Add the COMPOSE_PROFILES line of .env.sample to start every module as before, or set it empty to start XTM One alone}"
-
 include:
   - path: infra/redis.yml
     project_directory: .
