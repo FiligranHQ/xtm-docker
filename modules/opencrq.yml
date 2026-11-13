@@ -1,0 +1,80 @@
+services:
+
+  ###########################
+  # OPENCRQ                 #
+  ###########################
+
+  # Database of OpenCRQ in the shared pgsql instance, owned by its superuser like OpenAEV's.
+  # Unlike /docker-entrypoint-initdb.d, it also runs on an existing volume.
+  opencrq-db-init:
+    image: pgvector/pgvector:pg17
+    environment:
+      PGHOST: pgsql
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        psql -v ON_ERROR_STOP=1 <<'SQL'
+        SELECT 'CREATE DATABASE opencrq' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
+        SQL
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    restart: "no"
+
+  # Bucket of OpenCRQ in the shared S3 object storage: OpenCRQ does not create it in production.
+  opencrq-bucket-init:
+    image: pgsty/silo:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      OPENCRQ_S3_BUCKET: ${OPENCRQ_S3_BUCKET:-opencrq}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - mc alias set silo http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null && mc mb --ignore-existing "silo/$$OPENCRQ_S3_BUCKET"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  opencrq:
+    # Private until OpenCRQ is released: pulling it needs access to filigran/opengrc-platform on
+    # Docker Hub, and without it `docker compose up` stops at this image.
+    image: filigran/opengrc-platform:${OPENCRQ_VERSION:-latest}
+    environment:
+      # One process for the HTTP server and the background jobs (`split` runs them apart)
+      - PROCESS_MANAGER__PROFILE=monolith
+      - HTTP_SERVER__HOST=0.0.0.0
+      - HTTP_SERVER__PORT=3002
+      - HEALTHCHECK_HTTP_SERVER__PORT=8444
+      - POSTGRES__HOST=pgsql
+      - POSTGRES__PORT=5432
+      - POSTGRES__DATABASE=opencrq
+      - POSTGRES__USER=${POSTGRES_USER}
+      - POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
+      - FILE_STORAGE__ENDPOINT=http://minio:9000
+      - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
+      - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
+      # XTM One is required: OpenCRQ refuses to start without these three
+      - XTM_ONE__URL=http://xtm-one:4000
+      - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+      - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME}://${OPENCRQ_HOST}:${OPENCRQ_PORT}
+    ports:
+      - "8082:3002" # If you change the host port (the left one) do not forget to update OPENCRQ_PORT in your .env
+    depends_on:
+      opencrq-db-init:
+        condition: service_completed_successfully
+      opencrq-bucket-init:
+        condition: service_completed_successfully
+      xtm-one:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8444/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: always

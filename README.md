@@ -1,6 +1,6 @@
 # XTM Docker Deployment
 
-Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev) and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
+Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev), OpenCRQ and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
 
 ## Overview
 
@@ -8,16 +8,17 @@ This repository provides a complete Docker Compose setup for running:
 
 - **OpenCTI** — Open Cyber Threat Intelligence Platform
 - **OpenAEV** — Open Adversary Emulation & Validation Platform
+- **OpenCRQ** — Cyber Risk Quantification platform (its image is private until its release)
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV and XTM One)
+- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV, OpenCRQ and XTM One)
 
 ## Prerequisites
 
-- Docker Engine 20.10+
-- Docker Compose v2.0+
+- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
 - Minimum 16GB RAM (recommended 32GB for production)
 - At least 50GB available disk space
+- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
 
 ## Architecture
 
@@ -25,6 +26,7 @@ This repository provides a complete Docker Compose setup for running:
 graph TB
     OpenCTI["OpenCTI<br/>:8080"]
     OpenAEV["OpenAEV<br/>:8081"]
+    OpenCRQ["OpenCRQ<br/>:8082"]
     XTMOne["XTM One<br/>:8090"]
     Composer["XTM Composer"]
     Worker["OpenCTI Worker"]
@@ -34,6 +36,7 @@ graph TB
     Composer <--> OpenAEV
     OpenCTI <--> XTMOne
     XTMOne <--> OpenAEV
+    OpenCRQ <--> XTMOne
     Worker --> OpenCTI
     XTMOneWorker --> XTMOne
 
@@ -53,10 +56,27 @@ graph TB
     OpenAEV --> Silo
     OpenAEV --> RabbitMQ
     OpenAEV --> PG
+    OpenCRQ --> Silo
+    OpenCRQ --> PG
     XTMOne --> Silo
     XTMOne --> Redis
     XTMOne --> PG
 ```
+
+`docker-compose.yml` includes one file per part of the stack:
+
+| File | Services |
+|------|----------|
+| `infra/redis.yml` | Redis |
+| `infra/elasticsearch.yml` | Elasticsearch |
+| `infra/postgresql.yml` | PostgreSQL + pgvector |
+| `infra/silo.yml` | Silo (S3) |
+| `infra/rabbitmq.yml` | RabbitMQ, with `infra/rabbitmq.conf` |
+| `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
+| `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
+| `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
+| `modules/opencrq.yml` | OpenCRQ and the initialisation of its database and bucket |
+| `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
 ## Quick Start
 
@@ -129,8 +149,13 @@ IMAP_STARTTLS_ENABLE=false
 ### 3. Start the stack
 
 ```bash
+docker compose pull
 docker compose up -d
 ```
+
+Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
+
+> **OpenCRQ before its release:** its image, `filigran/opengrc-platform`, is private on Docker Hub. Until OpenCRQ is released, `docker compose pull` and `docker compose up -d` need a Docker Hub account with access to it (`docker login`); without one they stop at that image.
 
 ### 4. Access the platforms
 
@@ -138,6 +163,7 @@ Once all services are healthy (this may take a few minutes on first start):
 
 - **OpenCTI**: http://localhost:8080
 - **OpenAEV**: http://localhost:8081
+- **OpenCRQ**: http://localhost:8082
 - **XTM One**: http://localhost:8090
 - **RabbitMQ Management**: http://localhost:15672
 
@@ -178,6 +204,10 @@ Once all services are healthy (this may take a few minutes on first start):
 
 ## Configuration
 
+### Existing deployments
+
+A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`.
+
 ### Memory Requirements
 
 Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
@@ -190,7 +220,7 @@ Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
 
 ### Scaling Workers
 
-Modify the worker replicas in `docker-compose.yml`:
+Modify the worker replicas in `modules/opencti.yml`:
 
 ```yaml
 worker:
