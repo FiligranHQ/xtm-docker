@@ -15,5 +15,7 @@ include:
     project_directory: .
   - path: modules/openaev.yml
     project_directory: .
+  - path: modules/opencrq.yml
+    project_directory: .
   - path: modules/xtm-composer.yml
     project_directory: .
