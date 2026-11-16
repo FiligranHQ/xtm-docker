@@ -77,7 +77,7 @@ graph TB
 | `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
 | `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
 | `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
-| `modules/opencrq.yml` | OpenCRQ and the initialisation of its role, database and bucket |
+| `modules/opencrq.yml` | OpenCRQ and the initialisation of its database and bucket |
 | `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
 ## Quick Start
@@ -94,7 +94,7 @@ cd xtm-docker
 Create a `.env` file with the required configuration. An example is available in [.env.sample](.env.sample).
 
 ```bash
-# PostgreSQL (superuser of the shared instance, used by OpenAEV)
+# PostgreSQL (superuser of the shared instance, used by OpenAEV and OpenCRQ)
 POSTGRES_USER=openaev
 POSTGRES_PASSWORD=<generate-strong-password>
 
@@ -123,9 +123,6 @@ OPENAEV_ADMIN_EMAIL=admin@filigran.io
 OPENAEV_ADMIN_PASSWORD=<generate-strong-password>
 OPENAEV_ADMIN_TOKEN=<generate-uuid-v4>
 OPENAEV_HEALTHCHECK_KEY=<generate-uuid-v4>
-
-# OpenCRQ
-OPENCRQ_POSTGRES_PASSWORD=<generate-strong-password>
 
 # SMTP (mandatory)
 SMTP_HOST=localhost
@@ -217,7 +214,7 @@ A `.env` made for an earlier version of this repository may still have a `COMPOS
 
 ### OpenCRQ
 
-OpenCRQ starts with the rest of the stack, together with two one-shot services that prepare its storage on each start: `opencrq-db-init` creates its role and database in the shared `pgsql` instance, and `opencrq-bucket-init` creates its bucket in RustFS. Set `OPENCRQ_POSTGRES_PASSWORD` in `.env`: `opencrq-db-init` stops without it, and OpenCRQ with it.
+OpenCRQ starts with the rest of the stack, together with two one-shot services that prepare its storage on each start: `opencrq-db-init` creates its database in the shared `pgsql` instance, where OpenCRQ connects as `POSTGRES_USER` like OpenAEV, and `opencrq-bucket-init` creates its bucket in RustFS.
 
 OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`, and its OpenCTI and OpenAEV connectors are preconfigured with the admin tokens of both platforms. After the first start:
 

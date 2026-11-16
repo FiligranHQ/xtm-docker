@@ -4,8 +4,8 @@ services:
   # OPENCRQ                 #
   ###########################
 
-  # Role and database of OpenCRQ in the shared pgsql instance. Unlike
-  # /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
+  # Database of OpenCRQ in the shared pgsql instance, owned by its superuser like OpenAEV's.
+  # Unlike /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
   opencrq-db-init:
     image: pgvector/pgvector:pg17
     environment:
@@ -13,18 +13,11 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: postgres
-      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
-      OPENCRQ_POSTGRES_USER: ${OPENCRQ_POSTGRES_USER:-opencrq}
-      OPENCRQ_POSTGRES_PASSWORD: ${OPENCRQ_POSTGRES_PASSWORD:-}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        [ -n "$$OPENCRQ_POSTGRES_PASSWORD" ] || { echo "OPENCRQ_POSTGRES_PASSWORD is not set in .env" >&2; exit 1; }
-        [ "$$OPENCRQ_POSTGRES_USER" != "$$PGUSER" ] && [ "$$OPENCRQ_POSTGRES_USER" != "$$XTM_ONE_POSTGRES_USER" ] || { echo "OPENCRQ_POSTGRES_USER must differ from POSTGRES_USER and XTM_ONE_POSTGRES_USER" >&2; exit 1; }
-        psql -v ON_ERROR_STOP=1 -v role="$$OPENCRQ_POSTGRES_USER" -v pw="$$OPENCRQ_POSTGRES_PASSWORD" <<'SQL'
-        SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
-        SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
-        SELECT format('CREATE DATABASE opencrq OWNER %I', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
+        psql -v ON_ERROR_STOP=1 <<'SQL'
+        SELECT 'CREATE DATABASE opencrq' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
         SQL
     depends_on:
       pgsql:
@@ -59,8 +52,8 @@ services:
       - POSTGRES__HOST=pgsql
       - POSTGRES__PORT=5432
       - POSTGRES__DATABASE=opencrq
-      - POSTGRES__USER=${OPENCRQ_POSTGRES_USER:-opencrq}
-      - POSTGRES__PASSWORD=${OPENCRQ_POSTGRES_PASSWORD:-}
+      - POSTGRES__USER=${POSTGRES_USER}
+      - POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
       - FILE_STORAGE__ENDPOINT=http://minio:9000
       - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
       - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
