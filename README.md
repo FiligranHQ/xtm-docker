@@ -157,7 +157,7 @@ docker compose up -d
 
 Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
-> **OpenCRQ before its release:** its image, `opencrq/platform`, is private on Docker Hub. Until OpenCRQ is released, `docker compose pull` and `docker compose up -d` need a Docker Hub account with access to it (`docker login`); without one they stop at that image.
+> **OpenCRQ before its release:** its image, `filigran/opengrc-platform`, is private on Docker Hub, and `OPENCRQ_VERSION` is `main`, the image of its main branch. Until OpenCRQ is released, `docker compose pull` and `docker compose up -d` need a Docker Hub account with access to it (`docker login`); without one they stop at that image.
 
 ### 4. Access the platforms
 

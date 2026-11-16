@@ -43,8 +43,9 @@ services:
 
   opencrq:
     # Private until OpenCRQ is released: pulling it needs access on Docker Hub, and without
-    # it `docker compose up` stops at this image.
-    image: opencrq/platform:latest
+    # it `docker compose up` stops at this image. Its tags: `main` (the main branch), `sha-<commit>`,
+    # and from its first release the version (`x.y.z`, `x.y`) and `latest`.
+    image: filigran/opengrc-platform:${OPENCRQ_VERSION:-main}
     environment:
       - HTTP_SERVER__HOST=0.0.0.0
       - HTTP_SERVER__PORT=3002
