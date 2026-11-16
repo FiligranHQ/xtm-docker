@@ -69,7 +69,7 @@ services:
       - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://openaev:8080
       - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENAEV_ADMIN_TOKEN}
     ports:
-      - "${OPENCRQ_PORT:-8082}:3002"
+      - "8082:3002" # If you change the host port (the left one) do not forget to update OPENCRQ_PORT in your .env
     depends_on:
       opencrq-db-init:
         condition: service_completed_successfully
