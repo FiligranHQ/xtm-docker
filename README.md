@@ -11,7 +11,7 @@ This repository provides a complete Docker Compose setup for running:
 - **OpenCRQ** — Cyber Risk Quantification platform (its image is private until its release)
 - **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
 - **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, Silo (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV, OpenCRQ and XTM One)
+- **Shared Infrastructure** — Elasticsearch, RustFS (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV, OpenCRQ and XTM One)
 
 ## Prerequisites
 
@@ -37,28 +37,30 @@ graph TB
     OpenCTI <--> XTMOne
     XTMOne <--> OpenAEV
     OpenCRQ <--> XTMOne
+    OpenCRQ --> OpenCTI
+    OpenCRQ --> OpenAEV
     Worker --> OpenCTI
     XTMOneWorker --> XTMOne
 
     subgraph Shared["Shared Infrastructure"]
         ES[("Elasticsearch")]
-        Silo[("Silo (S3)")]
+        RustFS[("RustFS (S3)")]
         RabbitMQ[("RabbitMQ")]
         Redis[("Redis")]
         PG[("PostgreSQL + pgvector")]
     end
 
     OpenCTI --> ES
-    OpenCTI --> Silo
+    OpenCTI --> RustFS
     OpenCTI --> RabbitMQ
     OpenCTI --> Redis
     OpenAEV --> ES
-    OpenAEV --> Silo
+    OpenAEV --> RustFS
     OpenAEV --> RabbitMQ
     OpenAEV --> PG
-    OpenCRQ --> Silo
+    OpenCRQ --> RustFS
     OpenCRQ --> PG
-    XTMOne --> Silo
+    XTMOne --> RustFS
     XTMOne --> Redis
     XTMOne --> PG
 ```
@@ -70,12 +72,12 @@ graph TB
 | `infra/redis.yml` | Redis |
 | `infra/elasticsearch.yml` | Elasticsearch |
 | `infra/postgresql.yml` | PostgreSQL + pgvector |
-| `infra/silo.yml` | Silo (S3) |
+| `infra/rustfs.yml` | RustFS (S3) |
 | `infra/rabbitmq.yml` | RabbitMQ, with `infra/rabbitmq.conf` |
 | `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
 | `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
 | `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
-| `modules/opencrq.yml` | OpenCRQ and the initialisation of its database and bucket |
+| `modules/opencrq.yml` | OpenCRQ and the initialisation of its role, database and bucket |
 | `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
 ## Quick Start
@@ -96,7 +98,7 @@ Create a `.env` file with the required configuration. An example is available in
 POSTGRES_USER=openaev
 POSTGRES_PASSWORD=<generate-strong-password>
 
-# Silo (S3 object storage, the variables keep their MINIO_ prefix)
+# RustFS (S3 object storage, the variables keep their MINIO_ prefix)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=<generate-strong-password>
 
@@ -121,6 +123,9 @@ OPENAEV_ADMIN_EMAIL=admin@filigran.io
 OPENAEV_ADMIN_PASSWORD=<generate-strong-password>
 OPENAEV_ADMIN_TOKEN=<generate-uuid-v4>
 OPENAEV_HEALTHCHECK_KEY=<generate-uuid-v4>
+
+# OpenCRQ
+OPENCRQ_POSTGRES_PASSWORD=<generate-strong-password>
 
 # SMTP (mandatory)
 SMTP_HOST=localhost
@@ -155,7 +160,7 @@ docker compose up -d
 
 Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
-> **OpenCRQ before its release:** its image, `filigran/opengrc-platform`, is private on Docker Hub. Until OpenCRQ is released, `docker compose pull` and `docker compose up -d` need a Docker Hub account with access to it (`docker login`); without one they stop at that image.
+> **OpenCRQ before its release:** its image, `opencrq/platform`, is private on Docker Hub. Until OpenCRQ is released, `docker compose pull` and `docker compose up -d` need a Docker Hub account with access to it (`docker login`); without one they stop at that image.
 
 ### 4. Access the platforms
 
@@ -206,7 +211,25 @@ Once all services are healthy (this may take a few minutes on first start):
 
 ### Existing deployments
 
+Updating a stack that ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: its first steps run before the `git pull`.
+
 A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`.
+
+### OpenCRQ
+
+OpenCRQ starts with the rest of the stack, together with two one-shot services that prepare its storage on each start: `opencrq-db-init` creates its role and database in the shared `pgsql` instance, and `opencrq-bucket-init` creates its bucket in RustFS. Set `OPENCRQ_POSTGRES_PASSWORD` in `.env`: `opencrq-db-init` stops without it, and OpenCRQ with it.
+
+OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`, and its OpenCTI and OpenAEV connectors are preconfigured with the admin tokens of both platforms. After the first start:
+
+1. Create the first OpenCRQ admin in the setup wizard at http://localhost:8082. Use the `XTM_ONE_ADMIN_EMAIL` address: XTM One matches users by email.
+2. In **Integrations**, link a service account to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
+
+Limitations:
+
+- The OpenCRQ session cookie is `Secure`. Over plain HTTP, browsers accept it on `localhost` at most, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
+- The links OpenCRQ shows to OpenCTI and OpenAEV objects use the connector URLs, which are the internal `http://opencti:8080` and `http://openaev:8080`.
+- OpenCRQ takes its edition from the XTM license XTM One returns. Without one it runs Community Edition: a single tenant and no embedded Ask Ariane chat.
+- OpenCRQ adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance it shares with OpenAEV and XTM One.
 
 ### Memory Requirements
 
@@ -241,6 +264,10 @@ OPENCTI_PORT=443
 OPENAEV_EXTERNAL_SCHEME=https
 OPENAEV_HOST=openaev.yourdomain.com
 OPENAEV_PORT=443
+
+OPENCRQ_EXTERNAL_SCHEME=https
+OPENCRQ_HOST=opencrq.yourdomain.com
+OPENCRQ_PORT=443
 ```
 
 ## Common Operations
@@ -274,9 +301,19 @@ docker compose down
 docker compose down -v
 ```
 
+### Upgrade a stack that ran MinIO or Silo
+
+The `minio` service runs [RustFS](https://rustfs.com), an open source (Apache 2.0) S3-compatible object storage. The service name, the `s3data` volume and the `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` variables keep their former names, so the OpenCTI, OpenAEV, OpenCRQ and XTM One settings do not change.
+
+RustFS does not start on an `s3data` volume written by MinIO or Silo (`Permission denied`: that volume belongs to root, RustFS runs as uid 10001). The volume (`xtm_s3data` with the project name of `.env.sample`) holds the buckets of OpenCTI, OpenAEV, OpenCRQ and XTM One. Back it up and move it with the migration guide listed in the [breaking changes of the OpenCTI documentation](https://docs.opencti.io/latest/deployment/breaking-changes/) (the [OpenAEV breaking changes](https://docs.openaev.io/latest/deployment/breaking-changes/) list the same move) before the next `docker compose up -d` with this compose file, then check a file in each platform. The guide's first steps run with the previous compose file: if you update this clone with `git pull`, run them before the pull.
+
+If your stack ran a `pgsql-xtm-one` container (separate PostgreSQL instances), follow [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) too: dump the databases and back up the storage volume before the pull, and start the stack only once the databases are restored and the storage is moved.
+
+Started without moving the storage: `docker compose up -d` stops on the unhealthy `minio` service (`docker compose logs minio` shows `Permission denied`), and the data of the volume is unchanged. The guide explains how to go back to the previous storage service. If your stack ran a `pgsql-xtm-one` container, read the last paragraph of [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) before running `docker compose up -d` again.
+
 ### Upgrade from separate PostgreSQL instances
 
-Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
+Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. These versions also ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: the storage has to be moved too before the final `docker compose up -d`. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
 
 ```bash
 docker compose stop openaev xtm-one xtm-one-worker

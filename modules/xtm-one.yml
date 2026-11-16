@@ -58,6 +58,7 @@ services:
       # Internal API endpoints for platform integrations (Docker hostnames)
       - OPENCTI_API_URL=http://opencti:8080
       - OPENAEV_API_URL=http://openaev:8080
+      - OPENCRQ_API_URL=http://opencrq:3002
       # The URL OpenCTI and OpenAEV reach XTM One on (XTM__XTM_ONE_URL,
       # OPENAEV_XTM_ONE_URL): accepted as the audience of the tokens they send,
       # for versions that address them to that URL instead of the BASE_URL above

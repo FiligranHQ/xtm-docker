@@ -5,7 +5,7 @@ include:
     project_directory: .
   - path: infra/postgresql.yml
     project_directory: .
-  - path: infra/silo.yml
+  - path: infra/rustfs.yml
     project_directory: .
   - path: infra/rabbitmq.yml
     project_directory: .

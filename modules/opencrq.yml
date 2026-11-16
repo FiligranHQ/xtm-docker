@@ -4,8 +4,8 @@ services:
   # OPENCRQ                 #
   ###########################
 
-  # Database of OpenCRQ in the shared pgsql instance, owned by its superuser like OpenAEV's.
-  # Unlike /docker-entrypoint-initdb.d, it also runs on an existing volume.
+  # Role and database of OpenCRQ in the shared pgsql instance. Unlike
+  # /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
   opencrq-db-init:
     image: pgvector/pgvector:pg17
     environment:
@@ -13,57 +13,69 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: postgres
+      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
+      OPENCRQ_POSTGRES_USER: ${OPENCRQ_POSTGRES_USER:-opencrq}
+      OPENCRQ_POSTGRES_PASSWORD: ${OPENCRQ_POSTGRES_PASSWORD:-}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        psql -v ON_ERROR_STOP=1 <<'SQL'
-        SELECT 'CREATE DATABASE opencrq' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
+        [ -n "$$OPENCRQ_POSTGRES_PASSWORD" ] || { echo "OPENCRQ_POSTGRES_PASSWORD is not set in .env" >&2; exit 1; }
+        [ "$$OPENCRQ_POSTGRES_USER" != "$$PGUSER" ] && [ "$$OPENCRQ_POSTGRES_USER" != "$$XTM_ONE_POSTGRES_USER" ] || { echo "OPENCRQ_POSTGRES_USER must differ from POSTGRES_USER and XTM_ONE_POSTGRES_USER" >&2; exit 1; }
+        psql -v ON_ERROR_STOP=1 -v role="$$OPENCRQ_POSTGRES_USER" -v pw="$$OPENCRQ_POSTGRES_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
+        SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
+        SELECT format('CREATE DATABASE opencrq OWNER %I', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
         SQL
     depends_on:
       pgsql:
         condition: service_healthy
     restart: "no"
 
-  # Bucket of OpenCRQ in the shared S3 object storage: OpenCRQ does not create it in production.
+  # OpenCRQ does not create its bucket in production: it stops at boot when it is missing.
+  # RustFS has no client of its own: the AWS CLI speaks its S3 API.
   opencrq-bucket-init:
-    image: pgsty/silo:latest
+    image: amazon/aws-cli:latest
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
       OPENCRQ_S3_BUCKET: ${OPENCRQ_S3_BUCKET:-opencrq}
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - mc alias set silo http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null && mc mb --ignore-existing "silo/$$OPENCRQ_S3_BUCKET"
+      - aws --endpoint-url http://minio:9000 s3api head-bucket --bucket "$$OPENCRQ_S3_BUCKET" 2>/dev/null || aws --endpoint-url http://minio:9000 s3api create-bucket --bucket "$$OPENCRQ_S3_BUCKET"
     depends_on:
       minio:
         condition: service_healthy
     restart: "no"
 
   opencrq:
-    # Private until OpenCRQ is released: pulling it needs access to filigran/opengrc-platform on
-    # Docker Hub, and without it `docker compose up` stops at this image.
-    image: filigran/opengrc-platform:${OPENCRQ_VERSION:-latest}
+    # Private until OpenCRQ is released: pulling it needs access on Docker Hub, and without
+    # it `docker compose up` stops at this image.
+    image: opencrq/platform:latest
     environment:
-      # One process for the HTTP server and the background jobs (`split` runs them apart)
-      - PROCESS_MANAGER__PROFILE=monolith
       - HTTP_SERVER__HOST=0.0.0.0
       - HTTP_SERVER__PORT=3002
       - HEALTHCHECK_HTTP_SERVER__PORT=8444
       - POSTGRES__HOST=pgsql
       - POSTGRES__PORT=5432
       - POSTGRES__DATABASE=opencrq
-      - POSTGRES__USER=${POSTGRES_USER}
-      - POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES__USER=${OPENCRQ_POSTGRES_USER:-opencrq}
+      - POSTGRES__PASSWORD=${OPENCRQ_POSTGRES_PASSWORD:-}
       - FILE_STORAGE__ENDPOINT=http://minio:9000
       - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
       - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
-      # XTM One is required: OpenCRQ refuses to start without these three
+      # XTM One, which OpenCRQ requires: it refuses to start without these three
       - XTM_ONE__URL=http://xtm-one:4000
       - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
-      - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME}://${OPENCRQ_HOST}:${OPENCRQ_PORT}
+      - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
+      # OpenCTI and OpenAEV connectors, keyed by the id of the tenant every new OpenCRQ starts with
+      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://opencti:8080
+      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://openaev:8080
+      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENAEV_ADMIN_TOKEN}
     ports:
-      - "8082:3002" # If you change the host port (the left one) do not forget to update OPENCRQ_PORT in your .env
+      - "${OPENCRQ_PORT:-8082}:3002"
     depends_on:
       opencrq-db-init:
         condition: service_completed_successfully
@@ -71,10 +83,10 @@ services:
         condition: service_completed_successfully
       xtm-one:
         condition: service_healthy
+    restart: always
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8444/ >/dev/null || exit 1"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8444/health"]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 30s
-    restart: always
+      start_period: 120s
