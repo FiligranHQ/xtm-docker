@@ -325,7 +325,7 @@ If you started the new version before dumping, your data is still in the old vol
    docker compose logs <service-name>
    ```
 
-### OpenCTI/OpenAEV not connecting
+### OpenCTI/OpenAEV/OpenCRQ not connecting
 
 1. Ensure all dependency services are healthy
 2. Verify tokens match between services
