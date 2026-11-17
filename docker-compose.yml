@@ -676,7 +676,7 @@ services:
         condition: service_healthy
     restart: "no"
   opencrq:
-    image: opencrq/platform:latest
+    image: filigran/opencrq:latest
     environment:
       - HTTP_SERVER__HOST=0.0.0.0
       - HTTP_SERVER__PORT=3002
