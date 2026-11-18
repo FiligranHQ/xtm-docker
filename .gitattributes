@@ -1,0 +1,2 @@
+# The scripts run in Linux containers: keep their line endings Unix, even in a clone made on Windows.
+*.sh text eol=lf

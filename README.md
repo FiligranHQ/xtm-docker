@@ -89,73 +89,23 @@ git clone https://github.com/FiligranHQ/xtm-docker.git
 cd xtm-docker
 ```
 
-### 2. Create environment file
-
-Create a `.env` file with the required configuration. An example is available in [.env.sample](.env.sample).
+### 2. Create the configuration
 
 ```bash
-# PostgreSQL (superuser of the shared instance, used by OpenAEV and OpenCRQ)
-POSTGRES_USER=openaev
-POSTGRES_PASSWORD=<generate-strong-password>
-
-# RustFS (S3 object storage, the variables keep their MINIO_ prefix)
-MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=<generate-strong-password>
-
-# RabbitMQ
-RABBITMQ_DEFAULT_USER=guest
-RABBITMQ_DEFAULT_PASS=<generate-strong-password>
-
-# OpenCTI
-OPENCTI_EXTERNAL_SCHEME=http
-OPENCTI_HOST=localhost
-OPENCTI_PORT=8080
-OPENCTI_ADMIN_EMAIL=admin@filigran.io
-OPENCTI_ADMIN_PASSWORD=<generate-strong-password>
-OPENCTI_ADMIN_TOKEN=<generate-uuid-v4>
-OPENCTI_HEALTHCHECK_ACCESS_KEY=<generate-uuid-v4>
-
-# OpenAEV
-OPENAEV_EXTERNAL_SCHEME=http
-OPENAEV_HOST=localhost
-OPENAEV_PORT=8081
-OPENAEV_ADMIN_EMAIL=admin@filigran.io
-OPENAEV_ADMIN_PASSWORD=<generate-strong-password>
-OPENAEV_ADMIN_TOKEN=<generate-uuid-v4>
-OPENAEV_HEALTHCHECK_KEY=<generate-uuid-v4>
-
-# SMTP (mandatory)
-SMTP_HOST=localhost
-SMTP_PORT=25
-SMTP_USERNAME=
-SMTP_PASSWORD=
-SMTP_AUTH=false
-SMTP_SSL_ENABLE=false
-SMTP_STARTTLS_ENABLE=false
-
-# IMAP (optional)
-OPENAEV_MAIL_IMAP_ENABLED=false
-IMAP_HOST=
-IMAP_PORT=993
-IMAP_USERNAME=
-IMAP_PASSWORD=
-IMAP_AUTH=true
-IMAP_SSL_ENABLE=true
-IMAP_STARTTLS_ENABLE=false
+docker compose -f init.yml run --rm init
 ```
 
-> **Tip:** Generate UUIDs using `uuidgen`. `OPENCTI_ENCRYPTION_KEY` must be a 32-byte base64 string produced with `openssl rand -base64 32`, **not** a UUID. `XTM_ONE_SECRET_KEY` and `PLATFORM_REGISTRATION_TOKEN` can be any long random string (e.g. `openssl rand -hex 32`).
->
-> The full XTM One configuration (admin credentials, image tag, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of [.env.sample](.env.sample). `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI and OpenAEV register themselves with XTM One — it MUST be identical for the three platforms.
+This creates `.env` from [.env.sample](.env.sample), with a random value for every password, key and token, the users of PostgreSQL and RabbitMQ, and mail sent to `localhost` until you set your SMTP server. It runs in a temporary Alpine container, so it needs nothing but Docker, on Linux, macOS and Windows. It prints the URLs and the admin passwords; every secret stays in `.env`, which only you can read. It never overwrites an existing `.env`.
+
+> **Your own values:** edit `.env` afterwards, before the first start, for your host names (`*_HOST`, `*_EXTERNAL_SCHEME`, `*_PORT`), your SMTP server or the admin emails. `OPENCTI_ENCRYPTION_KEY` is a 32-byte base64 key, not a UUID. `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI, OpenAEV and OpenCRQ register with XTM One: every platform of the stack uses the same value. The full XTM One configuration (admin credentials, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of `.env`.
 
 ### 3. Start the stack
 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose up -d --pull always
 ```
 
-Pull first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
+`--pull always` downloads the images first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
 ### 4. Access the platforms
 
