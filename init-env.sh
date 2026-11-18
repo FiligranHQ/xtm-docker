@@ -41,6 +41,9 @@ Then sign in, once every service is healthy (a few minutes the first time), as $
   XTM One   http://localhost:$(get XTM_ONE_PORT)   password $(get XTM_ONE_ADMIN_PASSWORD)
   OpenCTI   http://localhost:$(get OPENCTI_PORT)   password $(get OPENCTI_ADMIN_PASSWORD)
   OpenAEV   http://localhost:$(get OPENAEV_PORT)   password $(get OPENAEV_ADMIN_PASSWORD)
-  OpenCRQ   http://localhost:$(get OPENCRQ_PORT)   create its owner account on the first visit
+  OpenCRQ   http://localhost:$(get OPENCRQ_PORT)   Sign in with XTM One, as XTM One's admin
+OpenCRQ starts with no tenant: create the first one, put its id (the UUID in its URL) in
+OPENCRQ_TENANT_ID in .env, then run docker compose up -d again, so that its OpenCTI and
+OpenAEV connectors feed it.
 Every password, key and token stays in .env.
 MSG

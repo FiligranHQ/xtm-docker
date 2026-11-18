@@ -60,11 +60,13 @@ services:
       - XTM_ONE__URL=http://xtm-one:4000
       - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
       - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
-      # OpenCTI and OpenAEV connectors, keyed by the id of the tenant every new OpenCRQ starts with
-      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://opencti:8080
-      - CONNECTORS__OPENCTI__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__URL=http://openaev:8080
-      - CONNECTORS__OPENAEV__01a043da-ff47-72c2-aaa4-7da56d85c83e__TOKEN=${OPENAEV_ADMIN_TOKEN}
+      # OpenCTI and OpenAEV connectors, keyed by the id of the tenant they feed. A new OpenCRQ has no
+      # tenant: its first one is created in OpenCRQ, then its id goes in OPENCRQ_TENANT_ID. Until then
+      # the default, a valid id no tenant has, keeps OpenCRQ starting and the connectors idle.
+      - CONNECTORS__OPENCTI__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__URL=http://opencti:8080
+      - CONNECTORS__OPENCTI__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTORS__OPENAEV__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__URL=http://openaev:8080
+      - CONNECTORS__OPENAEV__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__TOKEN=${OPENAEV_ADMIN_TOKEN}
     ports:
       - "8082:3002" # If you change the host port (the left one) do not forget to update OPENCRQ_PORT in your .env
     depends_on:
