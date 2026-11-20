@@ -239,7 +239,7 @@ Two one-shot services prepare the storage of OpenCRQ on each start: `opencrq-db-
 OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`. At its first start it creates its initial tenant, and its OpenCTI and OpenAEV connectors are preconfigured for that tenant with the admin tokens of both platforms. After the first start:
 
 1. Open http://localhost:8082 and sign in with XTM One as `XTM_ONE_ADMIN_EMAIL`: XTM One's administrator is OpenCRQ's super administrator, and lands in the initial tenant.
-2. In **Integrations**, link a service account to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
+2. Create a service account in **Settings > Security > Service accounts**, then, in **Integrations**, link it to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
 
 Limitations:
 
