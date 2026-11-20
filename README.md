@@ -246,6 +246,7 @@ Limitations:
 - The OpenCRQ session cookie is `Secure`. Over plain HTTP, browsers accept it on `localhost` at most, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
 - The links OpenCRQ shows to OpenCTI and OpenAEV objects use the connector URLs, which are the internal `http://opencti:8080` and `http://openaev:8080`.
 - OpenCRQ takes its edition from the Filigran license XTM One returns at registration, which XTM One withholds while `PLATFORM_REGISTRATION_TOKEN` keeps its published default.
+- `OPENCRQ_POSTGRES_USER` is set once: changed after the first start, `opencrq-db-init` creates the new role, but the `opencrq` database and its tables stay owned by the old one.
 - OpenCRQ adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance it shares with OpenAEV and XTM One.
 
 ## Common Operations

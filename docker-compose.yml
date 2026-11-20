@@ -691,7 +691,6 @@ services:
       - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
       # XTM One
-      - XTM_ONE__ENABLED=true
       - XTM_ONE__URL=http://xtm-one:4000
       - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
       - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
@@ -707,6 +706,9 @@ services:
         condition: service_completed_successfully
       opencrq-bucket-init:
         condition: service_completed_successfully
+      # OpenCRQ registers at boot and retries five minutes later: started first, it runs Community Edition meanwhile
+      xtm-one:
+        condition: service_healthy
     restart: always
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8444/health"]
