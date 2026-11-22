@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-label="Architecture of the XTM Platform Docker stack">
+<title>Architecture of the XTM Platform Docker stack</title>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0 1L10 5L0 9z" fill="#0FBCFF"/></marker>
+<marker id="arrm" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0 1L10 5L0 9z" fill="#A9B1C6"/></marker>
+</defs>
+<rect width="1440" height="900" rx="24" fill="#0A0C1C"/>
+
+<text x="56" y="82" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="600" fill="#FBFBFB" text-anchor="start">Architecture of the stack</text>
+<text x="56" y="118" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="400" fill="#A9B1C6" text-anchor="start">One docker compose project: four products, their workers and modules, one shared infrastructure.</text>
+<rect x="56" y="150" width="1328" height="56" rx="14" fill="#111E36" stroke="#1F3965" stroke-width="1.5"/>
+<text x="80" y="185" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">Your browser</text>
+<text x="232" y="185" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">localhost:8090 XTM One   ·   :8080 OpenCTI   ·   :8082 OpenCRQ   ·   :8081 OpenAEV   ·   :15672 RabbitMQ management</text>
+<line x1="210.0" y1="206" x2="210.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
+<rect x="56" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<rect x="56" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
+<text x="80" y="312" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#FBFBFB" text-anchor="start">XTM One</text>
+<text x="340" y="312" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="18" font-weight="500" fill="#0FBCFF" text-anchor="end">:8090</text>
+<text x="80" y="340" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">Agentic core</text>
+<text x="80" y="380" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Runs with</text>
+<text x="80" y="404" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· xtm-one-worker</text>
+<text x="80" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
+<rect x="80" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="129.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
+<rect x="186.0" y="488" width="56" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="214.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Redis</text>
+<rect x="250.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="273.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<line x1="550.0" y1="206" x2="550.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
+<rect x="396" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<rect x="396" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
+<text x="420" y="312" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCTI</text>
+<text x="680" y="312" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="18" font-weight="500" fill="#0FBCFF" text-anchor="end">:8080</text>
+<text x="420" y="340" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">Threat intelligence</text>
+<text x="420" y="380" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Runs with</text>
+<text x="420" y="404" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· worker x3</text>
+<text x="420" y="428" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· 10 connectors</text>
+<text x="420" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
+<rect x="420" y="488" width="123" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="481.6" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Elasticsearch</text>
+<rect x="551.2" y="488" width="56" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="579.2" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Redis</text>
+<rect x="420" y="522" width="81" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="460.6" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RabbitMQ</text>
+<rect x="509.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="533.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<line x1="890.0" y1="206" x2="890.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
+<rect x="736" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<rect x="736" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
+<text x="760" y="312" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCRQ</text>
+<text x="1020" y="312" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="18" font-weight="500" fill="#0FBCFF" text-anchor="end">:8082</text>
+<text x="760" y="340" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">Risk quantification</text>
+<text x="760" y="380" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Runs with</text>
+<text x="760" y="404" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· opencrq-db-init</text>
+<text x="760" y="428" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· opencrq-bucket-init</text>
+<text x="760" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
+<rect x="760" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="809.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
+<rect x="866.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="889.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<line x1="1230.0" y1="206" x2="1230.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
+<rect x="1076" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<rect x="1076" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
+<text x="1100" y="312" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenAEV</text>
+<text x="1360" y="312" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="18" font-weight="500" fill="#0FBCFF" text-anchor="end">:8081</text>
+<text x="1100" y="340" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">Exposure validation</text>
+<text x="1100" y="380" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Runs with</text>
+<text x="1100" y="404" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· 4 collectors</text>
+<text x="1100" y="428" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· 2 injectors</text>
+<text x="1100" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
+<rect x="1100" y="488" width="123" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1161.6" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Elasticsearch</text>
+<rect x="1231.2" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1280.2" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
+<rect x="1100" y="522" width="81" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1140.6" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RabbitMQ</text>
+<rect x="1189.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1213.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<rect x="56" y="596" width="1328" height="56" rx="14" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="80" y="631" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">XTM Composer</text>
+<text x="232" y="631" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">manages the connectors of OpenCTI and the collectors of OpenAEV through the Docker socket</text>
+<text x="56" y="700" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#FBFBFB" text-anchor="start">Shared infrastructure</text>
+<rect x="56.0" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="76.0" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">Elasticsearch</text>
+<text x="76.0" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">:9200</text>
+<text x="76.0" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCTI, OpenAEV</text>
+<rect x="326.4" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="346.4" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">PostgreSQL + pgvector</text>
+<text x="346.4" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">pgsql</text>
+<text x="346.4" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenAEV, XTM One, OpenCRQ</text>
+<rect x="596.8" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="616.8" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">Silo (S3)</text>
+<text x="616.8" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">:9000</text>
+<text x="616.8" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">every product</text>
+<rect x="867.1999999999999" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="887.1999999999999" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">RabbitMQ</text>
+<text x="887.1999999999999" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">:5672 / :15672</text>
+<text x="887.1999999999999" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCTI, OpenAEV</text>
+<rect x="1137.6" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<text x="1157.6" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">Redis</text>
+<text x="1157.6" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">:6379</text>
+<text x="1157.6" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCTI, XTM One</text>
+</svg>
