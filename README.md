@@ -250,7 +250,7 @@ OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`. At i
 
 Open http://localhost:8082 and sign in with XTM One as `XTM_ONE_ADMIN_EMAIL`: XTM One's administrator is OpenCRQ's super administrator, and lands in the initial tenant.
 
-The automatic threat feed stream and the admin token as a bearer come with OpenCRQ releases after `0.261120.0` (OpenCRQ-Platform/opencrq#57 and #63). On `0.261120.0`, link a service account to the connectors in **Integrations** by hand, and OpenAEV cannot call OpenCRQ.
+The automatic threat feed stream and the admin token as a bearer come with OpenCRQ `0.261122.0` and later (OpenCRQ-Platform/opencrq#57 and #63), the version this compose file pins. On an older OpenCRQ, link a service account to the connectors in **Integrations** by hand, and OpenAEV cannot call OpenCRQ.
 
 Limitations:
 

@@ -687,7 +687,8 @@ services:
         condition: service_healthy
     restart: "no"
   opencrq:
-    image: filigran/opencrq:latest
+    # Pinned to the first release with the auto-created threat stream and the admin bearer (OpenCRQ-Platform/opencrq#57, #63)
+    image: filigran/opencrq:0.261122.0
     environment:
       - HTTP_SERVER__HOST=0.0.0.0
       - HTTP_SERVER__PORT=3002
