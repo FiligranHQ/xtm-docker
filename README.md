@@ -113,6 +113,7 @@ OPENAEV_HEALTHCHECK_KEY=<generate-uuid-v4>
 OPENCRQ_EXTERNAL_SCHEME=http
 OPENCRQ_HOST=localhost
 OPENCRQ_PORT=8082
+OPENCRQ_ADMIN_TOKEN=<generate-uuid-v4>
 OPENCRQ_POSTGRES_USER=opencrq
 OPENCRQ_POSTGRES_PASSWORD=<generate-strong-password>
 
@@ -236,10 +237,20 @@ OPENCRQ_PORT=443
 
 Two one-shot services prepare the storage of OpenCRQ on each start: `opencrq-db-init` creates its role and database in the shared `pgsql` instance, and `opencrq-bucket-init` creates its bucket in Silo. A deployment that predates OpenCRQ needs `OPENCRQ_POSTGRES_PASSWORD` in its `.env` before it pulls this version: without it, `opencrq-db-init` fails and OpenCRQ does not start.
 
-OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`. At its first start it creates its initial tenant, and its OpenCTI and OpenAEV connectors are preconfigured for that tenant with the admin tokens of both platforms. After the first start:
+OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`. At its first start it creates its initial tenant, and every integration is wired with the admin token of each product, with nothing to do by hand:
 
-1. Open http://localhost:8082 and sign in with XTM One as `XTM_ONE_ADMIN_EMAIL`: XTM One's administrator is OpenCRQ's super administrator, and lands in the initial tenant.
-2. Create a service account in **Settings > Security > Service accounts**, then, in **Integrations**, link it to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
+| Direction | How |
+|---|---|
+| OpenCRQ → XTM One | Registration and sign-in with `PLATFORM_REGISTRATION_TOKEN` |
+| OpenCRQ → OpenCTI | Connector with `OPENCTI_ADMIN_TOKEN`; OpenCRQ creates and binds its "OpenCRQ threat feed" live stream at start |
+| OpenCRQ → OpenAEV | Connector with `OPENAEV_ADMIN_TOKEN`, reading the bulk snapshots (`BULK_SNAPSHOT_EXPORT` preview feature, enabled on OpenAEV) |
+| OpenAEV → OpenCRQ | Pivots and product switcher with `OPENCRQ_ADMIN_TOKEN`, an admin bearer on the OpenCRQ API |
+| OpenCTI → OpenCRQ | Product switcher (`XTM__OPENCRQ_URL`) |
+| XTM One → OpenCRQ | `OPENCRQ_API_URL`, with the tokens OpenCRQ registers |
+
+Open http://localhost:8082 and sign in with XTM One as `XTM_ONE_ADMIN_EMAIL`: XTM One's administrator is OpenCRQ's super administrator, and lands in the initial tenant.
+
+The automatic threat feed stream and the admin token as a bearer come with OpenCRQ releases after `0.261120.0` (OpenCRQ-Platform/opencrq#57 and #63). On `0.261120.0`, link a service account to the connectors in **Integrations** by hand, and OpenAEV cannot call OpenCRQ.
 
 Limitations:
 
