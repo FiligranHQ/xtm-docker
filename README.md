@@ -156,7 +156,7 @@ Every setting lives in [`.env.sample`](.env.sample), one block per component:
 | `OPENAEV` | Public URL, admin account and token, health key, encryption key and salt, IMAP switch |
 | `OPENAEV COLLECTORS`, `OPENAEV INJECTORS` | The collector and injector ids, the optional NVD API key |
 | `XTM ONE` | Public URL, admin account, secret key, PostgreSQL role, S3 bucket, enterprise license, logs, the OpenSandbox switch and key |
-| `OPENCRQ` | Public URL, tenant of its connectors, admin token, S3 bucket |
+| `OPENCRQ` | Public URL, tenant of its connectors, admin token, PostgreSQL role, S3 bucket |
 
 **Existing deployments.** Updating a stack that ran MinIO or Silo: read [From MinIO or Silo](#from-minio-or-silo) first: its first steps run before the `git pull`.
 
@@ -175,10 +175,11 @@ OPENCTI_PORT=443
 # the same for OPENAEV_*, OPENCRQ_* and XTM_ONE_*
 ```
 
-**OpenCRQ.** Two one-shot services prepare its storage on each start: `opencrq-db-init` creates its database in `pgsql`, where OpenCRQ connects as `POSTGRES_USER` like OpenAEV, and `opencrq-bucket-init` its bucket in RustFS. OpenCRQ registers with XTM One with `PLATFORM_REGISTRATION_TOKEN`. Its OpenCTI and OpenAEV connectors feed the tenant `OPENCRQ_TENANT_ID` names: see `.env.sample`. Its limits in this stack:
+**OpenCRQ.** Two one-shot services prepare its storage on each start: `opencrq-db-init` creates its role and database in `pgsql`, and `opencrq-bucket-init` its bucket in RustFS. OpenCRQ registers with XTM One with `PLATFORM_REGISTRATION_TOKEN`. Its OpenCTI and OpenAEV connectors feed the tenant `OPENCRQ_TENANT_ID` names: see `.env.sample`. Its limits in this stack:
 
 - Its session cookie is `Secure`: over plain HTTP, browsers accept it on `localhost` only, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
 - The links it shows to OpenCTI and OpenAEV objects use the internal connector URLs (`http://opencti:8080`, `http://openaev:8080`).
+- `OPENCRQ_POSTGRES_USER` is set once: changed after the first start, the `opencrq` database and its tables stay owned by the old role.
 - It adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance.
 - The automatic threat feed stream and the admin token as a bearer need OpenCRQ `0.261122.0` or later; the stack runs `filigran/opencrq:latest`. On an older OpenCRQ, link a service account to the connectors in **Integrations** by hand; OpenAEV cannot call it.
 
@@ -224,7 +225,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Read the release notes of each product before an upgrade, and compare your `.env` with [`.env.sample`](.env.sample): a new block needs its values before the first start of the new version (a deployment that predates OpenCRQ needs `OPENCRQ_ADMIN_TOKEN`).
+Read the release notes of each product before an upgrade, and compare your `.env` with [`.env.sample`](.env.sample): a new block needs its values before the first start of the new version (a deployment that predates OpenCRQ needs `OPENCRQ_ADMIN_TOKEN` and `OPENCRQ_POSTGRES_PASSWORD`, or `opencrq-db-init` fails and OpenCRQ does not start).
 
 ### From MinIO or Silo
 
