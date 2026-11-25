@@ -41,6 +41,12 @@ services:
       # XTM One
       - XTM__XTM_ONE_URL=http://xtm-one:4000
       - XTM__XTM_ONE_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+      # OpenCRQ: the product switcher and the pivots open this instance
+      - XTM__OPENCRQ_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
+      # OpenAEV sends a `__type` introspection query before registering its Coverage
+      # connector, refused by default since OpenCTI 7.261109.0 (OpenAEV-Platform/openaev#9647).
+      # Remove once a released OpenAEV no longer needs it.
+      - APP__GRAPHQL__PLAYGROUND__FORCE_DISABLED_INTROSPECTION=false
     ports:
       - "${OPENCTI_PORT}:8080"
     depends_on:
@@ -79,7 +85,9 @@ services:
     image: opencti/connector-export-file-stix:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      # Token of a service account in a group with the "Bypass all capabilities" capability, such as Administrators:
+      # an export connector impersonates the user requesting the export. Falls back to the admin token when not set.
+      - OPENCTI_TOKEN=${CONNECTOR_EXPORT_FILE_STIX_TOKEN:-${OPENCTI_ADMIN_TOKEN}}
       - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_STIX_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
       - CONNECTOR_NAME=ExportFileStix2
@@ -92,7 +100,9 @@ services:
     image: opencti/connector-export-file-csv:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      # Token of a service account in a group with the "Bypass all capabilities" capability, such as Administrators:
+      # an export connector impersonates the user requesting the export. Falls back to the admin token when not set.
+      - OPENCTI_TOKEN=${CONNECTOR_EXPORT_FILE_CSV_TOKEN:-${OPENCTI_ADMIN_TOKEN}}
       - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_CSV_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
       - CONNECTOR_NAME=ExportFileCsv
@@ -105,7 +115,9 @@ services:
     image: opencti/connector-export-file-txt:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      # Token of a service account in a group with the "Bypass all capabilities" capability, such as Administrators:
+      # an export connector impersonates the user requesting the export. Falls back to the admin token when not set.
+      - OPENCTI_TOKEN=${CONNECTOR_EXPORT_FILE_TXT_TOKEN:-${OPENCTI_ADMIN_TOKEN}}
       - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_TXT_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
       - CONNECTOR_NAME=ExportFileTxt
@@ -119,6 +131,8 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true # Runs with its own service account, created with the token above
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=100
       - CONNECTOR_ID=${CONNECTOR_IMPORT_FILE_STIX_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
       - CONNECTOR_NAME=ImportFileStix
@@ -134,6 +148,8 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true # Runs with its own service account, created with the token above
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=100
       - CONNECTOR_ID=${CONNECTOR_IMPORT_DOCUMENT_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
       - CONNECTOR_NAME=ImportDocument
@@ -151,6 +167,8 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true # Runs with its own service account, created with the token above
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=100
       - CONNECTOR_ID=${CONNECTOR_IMPORT_FILE_YARA_ID} # Valid UUIDv4
       - CONNECTOR_NAME=ImportFileYARA
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
@@ -166,6 +184,8 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true # Runs with its own service account, created with the token above
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=100
       - CONNECTOR_ID=${CONNECTOR_ANALYSIS_ID} # Valid UUIDv4
       - CONNECTOR_TYPE=INTERNAL_ANALYSIS
       - CONNECTOR_NAME=ImportDocumentAnalysis
@@ -182,6 +202,8 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true # Runs with its own service account, created with the token above
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=100
       - CONNECTOR_ID=${CONNECTOR_IMPORT_EXTERNAL_REFERENCE_ID}
       - CONNECTOR_NAME=ImportExternalReference
     restart: always

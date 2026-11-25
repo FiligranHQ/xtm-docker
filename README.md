@@ -1,69 +1,58 @@
-# XTM Docker Deployment
+<a href="https://filigran.io"><img src="./.github/img/readme/banner.svg" width="100%" alt="XTM Platform for Docker by Filigran"></a>
 
-Docker deployment for the **eXtended Threat Management (XTM)** stack, combining [OpenCTI](https://github.com/OpenCTI-Platform/opencti), [OpenAEV](https://github.com/OpenAEV-Platform/openaev), OpenCRQ and [XTM One](https://github.com/XTM-One-Platform/xtm-one) into a unified threat intelligence, adversary emulation and AI-assisted analysis platform.
+<p align="center">
+  <a href="https://github.com/FiligranHQ/xtm-docker/actions/workflows/validate-compose.yml"><img src="https://img.shields.io/github/actions/workflow/status/FiligranHQ/xtm-docker/validate-compose.yml?branch=main&label=compose&style=flat-square&labelColor=0A0C1C&logo=docker&logoColor=white&color=001BDA" alt="compose"></a>
+  <a href="https://github.com/FiligranHQ/xtm-docker/commits/main"><img src="https://img.shields.io/github/last-commit/FiligranHQ/xtm-docker/main?style=flat-square&labelColor=0A0C1C&color=001BDA" alt="last commit"></a>
+  <a href="https://docs.xtmone.io/latest/"><img src="https://img.shields.io/badge/docs-read-001BDA?style=flat-square&labelColor=0A0C1C" alt="docs"></a>
+  <a href="https://community.filigran.io"><img src="https://img.shields.io/badge/community-slack-001BDA?style=flat-square&labelColor=0A0C1C&logo=slack&logoColor=white" alt="community"></a>
+</p>
 
-## Overview
+<p align="center"><b>The whole XTM Platform on one machine: XTM One, OpenCTI, OpenAEV and OpenCRQ, wired together by one Docker Compose file.</b></p>
 
-This repository provides a complete Docker Compose setup for running:
+This repository runs the four products of the [XTM Platform](https://filigran.io), the open platform for Agentic CTEM, with their workers, connectors, collectors and injectors and one shared infrastructure. Every integration between the products is configured from a single `.env` file: the products register with [XTM One](https://github.com/XTM-One-Platform/xtm-one), [OpenCTI](https://github.com/OpenCTI-Platform/opencti) and [OpenAEV](https://github.com/OpenAEV-Platform/openaev) exchange threats and coverage, and [OpenCRQ](https://github.com/OpenCRQ-Platform/opencrq) reads both to price the risk.
 
-- **OpenCTI** — Open Cyber Threat Intelligence Platform
-- **OpenAEV** — Open Adversary Emulation & Validation Platform
-- **OpenCRQ** — Cyber Risk Quantification platform (its image is private until its release)
-- **XTM One** — AI-powered assistant connecting OpenCTI and OpenAEV
-- **XTM Composer** — Unified connector/collector management
-- **Shared Infrastructure** — Elasticsearch, RustFS (S3 object storage), RabbitMQ, Redis, PostgreSQL + pgvector (one database each for OpenAEV, OpenCRQ and XTM One)
+## Table of contents
 
-## Prerequisites
+- [Part of the XTM Platform](#part-of-the-xtm-platform)
+- [Architecture](#architecture)
+- [Integrations](#integrations)
+- [Quick start](#quick-start)
+- [Access](#access)
+- [Configuration](#configuration)
+- [Included modules](#included-modules)
+- [Operations](#operations)
+- [Upgrade](#upgrade)
+- [Troubleshooting](#troubleshooting)
+- [Community](#community)
+- [About Filigran](#about-filigran)
 
-- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
-- Minimum 16GB RAM (recommended 32GB for production)
-- At least 50GB available disk space
-- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
+## Part of the XTM Platform
+
+The XTM Platform has five products. Each owns stages of the CTEM loop; XTM One runs the loop across them. This stack runs the first four; XTM Hub is the online library the products connect to.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/xtm-platform-ctem-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./.github/img/readme/xtm-platform-ctem-light.svg">
+  <img alt="The XTM Platform and the CTEM loop: XTM One at the core, OpenCTI, OpenCRQ and OpenAEV as modules, XTM Hub as the library, around the five stages scoping, discovery, prioritization, validation and mobilization" src="./.github/img/readme/xtm-platform-ctem-light.svg" width="100%">
+</picture>
+
+| | Product | Role in CTEM | In this stack | Repository |
+|---|---|---|---|---|
+| <picture><source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/mark-xtm-one-dark.svg"><img src="./.github/img/readme/mark-xtm-one-light.svg" width="24" alt=""></picture> | **XTM One** | Core and agentic layer: runs CTEM across the modules and gets the fix done | `xtm-one`, `xtm-one-worker` | [XTM-One-Platform/xtm-one](https://github.com/XTM-One-Platform/xtm-one) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/mark-opencti-dark.svg"><img src="./.github/img/readme/mark-opencti-light.svg" width="24" alt=""></picture> | **OpenCTI** | Scoping and Discovery: know the adversary and the threats that target you | `opencti`, `worker`, 10 connectors | [OpenCTI-Platform/opencti](https://github.com/OpenCTI-Platform/opencti) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/mark-opencrq-dark.svg"><img src="./.github/img/readme/mark-opencrq-light.svg" width="24" alt=""></picture> | **OpenCRQ** | Prioritization: turn exposure into financial risk | `opencrq` | [OpenCRQ-Platform/opencrq](https://github.com/OpenCRQ-Platform/opencrq) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/mark-openaev-dark.svg"><img src="./.github/img/readme/mark-openaev-light.svg" width="24" alt=""></picture> | **OpenAEV** | Validation: prove your defenses against real attacker techniques | `openaev`, 4 collectors, 2 injectors | [OpenAEV-Platform/openaev](https://github.com/OpenAEV-Platform/openaev) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/mark-xtm-hub-dark.svg"><img src="./.github/img/readme/mark-xtm-hub-light.svg" width="24" alt=""></picture> | **XTM Hub** | Tradecraft library and gateway: integrations, dashboards and scenarios for every product | online, not part of the stack | [XTM-Hub/xtm-hub](https://github.com/XTM-Hub/xtm-hub) |
 
 ## Architecture
 
-```mermaid
-graph TB
-    OpenCTI["OpenCTI<br/>:8080"]
-    OpenAEV["OpenAEV<br/>:8081"]
-    OpenCRQ["OpenCRQ<br/>:8082"]
-    XTMOne["XTM One<br/>:8090"]
-    Composer["XTM Composer"]
-    Worker["OpenCTI Worker"]
-    XTMOneWorker["XTM One Worker"]
+One Compose project: the four products, their workers and modules, XTM Composer to manage the connectors and collectors, and one shared infrastructure. PostgreSQL holds one database each for OpenAEV, XTM One and OpenCRQ; RustFS (S3) one bucket per product.
 
-    OpenCTI <--> Composer
-    Composer <--> OpenAEV
-    OpenCTI <--> XTMOne
-    XTMOne <--> OpenAEV
-    OpenCRQ <--> XTMOne
-    OpenCRQ --> OpenCTI
-    OpenCRQ --> OpenAEV
-    Worker --> OpenCTI
-    XTMOneWorker --> XTMOne
-
-    subgraph Shared["Shared Infrastructure"]
-        ES[("Elasticsearch")]
-        RustFS[("RustFS (S3)")]
-        RabbitMQ[("RabbitMQ")]
-        Redis[("Redis")]
-        PG[("PostgreSQL + pgvector")]
-    end
-
-    OpenCTI --> ES
-    OpenCTI --> RustFS
-    OpenCTI --> RabbitMQ
-    OpenCTI --> Redis
-    OpenAEV --> ES
-    OpenAEV --> RustFS
-    OpenAEV --> RabbitMQ
-    OpenAEV --> PG
-    OpenCRQ --> RustFS
-    OpenCRQ --> PG
-    XTMOne --> RustFS
-    XTMOne --> Redis
-    XTMOne --> PG
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/architecture-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./.github/img/readme/architecture-light.svg">
+  <img alt="Architecture of the stack: the browser reaches XTM One on 8090, OpenCTI on 8080, OpenCRQ on 8082 and OpenAEV on 8081; each product runs with its workers and modules; XTM Composer manages the connectors and collectors; Elasticsearch, PostgreSQL with pgvector, RustFS, RabbitMQ and Redis are shared" src="./.github/img/readme/architecture-light.svg" width="100%">
+</picture>
 
 `docker-compose.yml` includes one file per part of the stack:
 
@@ -80,16 +69,46 @@ graph TB
 | `modules/opencrq.yml` | OpenCRQ and the initialisation of its database and bucket |
 | `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
-## Quick Start
+## Integrations
 
-### 1. Clone the repository
+Inside the stack every call goes to the service name (`http://xtm-one:4000`, `http://opencti:8080`, `http://openaev:8080`, `http://opencrq:3002`), so the public host names never need to resolve inside Docker. The credentials come from `.env`; nothing is wired by hand.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/integrations-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./.github/img/readme/integrations-light.svg">
+  <img alt="Who calls whom: OpenCTI, OpenAEV and OpenCRQ register with XTM One with the registration token; OpenCTI and OpenAEV call each other with their admin tokens; OpenCRQ reads OpenCTI and OpenAEV through its connectors with their admin tokens; OpenAEV calls OpenCRQ with the OpenCRQ admin token" src="./.github/img/readme/integrations-light.svg" width="100%">
+</picture>
+
+| Caller | Callee | Credential | What for |
+|---|---|---|---|
+| OpenCTI, OpenAEV, OpenCRQ | XTM One | `PLATFORM_REGISTRATION_TOKEN` | Registration, the embedded AI assistant; then short-lived per-user tokens both ways |
+| XTM One | OpenCTI, OpenAEV, OpenCRQ | per-user tokens it signs | Agents and platform MCP servers, on `OPENCTI_API_URL`, `OPENAEV_API_URL`, `OPENCRQ_API_URL` |
+| OpenCTI | OpenAEV | `OPENAEV_ADMIN_TOKEN` | Scenarios from threats, links to OpenAEV (`XTM__OPENAEV_*`) |
+| OpenAEV | OpenCTI | `OPENCTI_ADMIN_TOKEN` | Threat intelligence and security coverage written back (`OPENAEV_XTM_OPENCTI_*`) |
+| OpenCRQ | OpenCTI | `OPENCTI_ADMIN_TOKEN` | OpenCRQ connector; OpenCRQ creates and binds its "OpenCRQ threat feed" live stream at start |
+| OpenCRQ | OpenAEV | `OPENAEV_ADMIN_TOKEN` | OpenCRQ connector reading the bulk snapshots (`BULK_SNAPSHOT_EXPORT` preview feature, enabled on OpenAEV) |
+| OpenAEV | OpenCRQ | `OPENCRQ_ADMIN_TOKEN` | Pivots and product switcher (`OPENAEV_XTM_OPENCRQ_*`) |
+| OpenCTI | OpenCRQ | none | Product switcher link (`XTM__OPENCRQ_URL`) |
+| OpenCTI worker and connectors, XTM Composer | OpenCTI | `OPENCTI_ADMIN_TOKEN` | Ingestion and connector management |
+| OpenAEV collectors and injectors, XTM Composer | OpenAEV | `OPENAEV_ADMIN_TOKEN` | Collection, injection and collector management |
+
+The public URLs (`*_EXTERNAL_SCHEME`, `*_HOST`, `*_PORT`) are the identity each product signs its requests with; [XTM Platform integration](https://docs.xtmone.io/latest/deployment/xtm-suite-integration/) explains the public and internal URLs in detail.
+
+## Quick start
+
+Requirements:
+
+- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
+- Minimum 16GB RAM (recommended 32GB for production)
+- At least 50GB available disk space
+- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
 
 ```bash
-git clone https://github.com/FiligranHQ/xtm-docker.git
-cd xtm-docker
+git clone https://github.com/FiligranHQ/xtm-docker.git && cd xtm-docker
+sudo sysctl -w vm.max_map_count=262144   # Elasticsearch, on Linux hosts
 ```
 
-### 2. Create the configuration
+Create the configuration:
 
 ```bash
 docker compose -f init.yml run --rm init
@@ -99,7 +118,7 @@ This creates `.env` from [.env.sample](.env.sample), with a random value for eve
 
 > **Your own values:** edit `.env` afterwards, before the first start, for your host names (`*_HOST`, `*_EXTERNAL_SCHEME`, `*_PORT`), your SMTP server or the admin emails. `OPENCTI_ENCRYPTION_KEY` is a 32-byte base64 key, not a UUID. `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI, OpenAEV and OpenCRQ register with XTM One: every platform of the stack uses the same value. The full XTM One configuration (admin credentials, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of `.env`.
 
-### 3. Start the stack
+Start the stack:
 
 ```bash
 docker compose up -d --pull always
@@ -107,80 +126,63 @@ docker compose up -d --pull always
 
 `--pull always` downloads the images first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
-### 4. Access the platforms
+`PLATFORM_REGISTRATION_TOKEN` is the secret every product registers with XTM One: keep one value for the whole stack, and never the published default `xtm-default-registration-token`, with which XTM One registers no new platform and withholds the Filigran license from the products.
 
-Once all services are healthy (this may take a few minutes on first start):
+The first start takes several minutes: `docker compose ps` shows every service `healthy` (or `exited (0)` for the one-shot init services) when it is done.
 
-- **OpenCTI**: http://localhost:8080
-- **OpenAEV**: http://localhost:8081
-- **OpenCRQ**: http://localhost:8082
-- **XTM One**: http://localhost:8090
-- **RabbitMQ Management**: http://localhost:15672
+## Access
 
-Sign in to XTM One, OpenCTI and OpenAEV with the admin email and password of each in `.env`. OpenCRQ has no password: **Sign in with XTM One**, as XTM One's admin, makes you its super administrator. It starts with no tenant: create the first one, put its id (the UUID in its URL, `/<id>/...`) in `OPENCRQ_TENANT_ID` in `.env`, then run `docker compose up -d` again, so that the OpenCTI and OpenAEV connectors of OpenCRQ feed that tenant.
+| Service | URL | Sign in with |
+|---|---|---|
+| XTM One | http://localhost:8090 | `XTM_ONE_ADMIN_EMAIL` / `XTM_ONE_ADMIN_PASSWORD` |
+| OpenCTI | http://localhost:8080 | `OPENCTI_ADMIN_EMAIL` / `OPENCTI_ADMIN_PASSWORD` |
+| OpenAEV | http://localhost:8081 | `OPENAEV_ADMIN_EMAIL` / `OPENAEV_ADMIN_PASSWORD` |
+| OpenCRQ | http://localhost:8082 | XTM One, as `XTM_ONE_ADMIN_EMAIL` (XTM One's administrator is OpenCRQ's super administrator) |
+| RabbitMQ management | http://localhost:15672 | `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` |
+| RustFS (S3) API | http://localhost:9000 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` |
 
-> **Public and internal URLs:** the URLs above (built from `OPENCTI_HOST`, `OPENAEV_HOST`, `XTM_ONE_HOST`, their ports and their `*_EXTERNAL_SCHEME`: set the scheme to `https` together with the host when you publish them over TLS) are also the identity each product signs its requests to the others with, so they are set on both XTM One containers (`BASE_URL`). Inside the stack the containers reach each other on their service names (`http://opencti:8080`, `http://openaev:8080`, `http://xtm-one:4000`), so the public host names do not need to resolve inside Docker. This needs XTM One, OpenCTI and OpenAEV releases that include [XTM-One-Platform/xtm-one#4883](https://github.com/XTM-One-Platform/xtm-one/pull/4883), [OpenCTI-Platform/opencti#18585](https://github.com/OpenCTI-Platform/opencti/pull/18585) and [OpenAEV-Platform/openaev#8143](https://github.com/OpenAEV-Platform/openaev/pull/8143).
-
-## Included Components
-
-### OpenCTI Connectors
-
-| Connector | Description |
-|-----------|-------------|
-| Export File STIX | Export data in STIX 2.1 format |
-| Export File CSV | Export data in CSV format |
-| Export File TXT | Export data in plain text format |
-| Import File STIX | Import STIX 2.1 bundles |
-| Import Document | Import and analyze PDF, HTML, and text documents |
-| Import File YARA | Import YARA rules |
-| Analysis | Document analysis connector |
-| Import External Reference | Import external references |
-| OpenCTI Datasets | Default marking definitions and identities |
-| MITRE ATT&CK | MITRE ATT&CK framework data |
-
-### OpenAEV Collectors
-
-| Collector | Description |
-|-----------|-------------|
-| MITRE ATT&CK | Attack techniques and procedures |
-| OpenAEV Datasets | Default datasets and configurations |
-| Atomic Red Team | Red Canary's Atomic Red Team tests |
-| NVD NIST CVE | CVE data from NVD (requires API key) |
-
-### OpenAEV Injectors
-
-| Injector | Description |
-|-----------|-------------|
-| Nmap | Network scanning capabilities |
-| Nuclei | Vulnerability scanning with Nuclei |
+The ports come from `XTM_ONE_PORT`, `OPENCTI_PORT`, `OPENCRQ_PORT` and `OPENAEV_PORT` in `.env`. The OpenAEV and OpenCRQ host ports are also written in `modules/openaev.yml` (`8081:8080`) and `modules/opencrq.yml` (`8082:3002`): change both together. Keep `XTM_ONE_ADMIN_EMAIL` equal to the admin email of the other products, so the users match between them.
 
 ## Configuration
 
-### Existing deployments
+Every setting lives in [`.env.sample`](.env.sample), one block per component:
 
-Updating a stack that ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: its first steps run before the `git pull`.
+| Block | Holds |
+|---|---|
+| `DEPENDENCIES` | RustFS, RabbitMQ and PostgreSQL credentials, `ELASTIC_MEMORY_SIZE`, SMTP and IMAP |
+| `COMMON` | `COMPOSE_PROJECT_NAME`, the XTM Composer id, `PLATFORM_REGISTRATION_TOKEN` |
+| `OPENCTI` | Public URL, admin account and token, health key, encryption key |
+| `OPENCTI CONNECTORS`, `OPENCTI DEFAULT DATA` | The connector ids |
+| `OPENAEV` | Public URL, admin account and token, health key, encryption key and salt, IMAP switch |
+| `OPENAEV COLLECTORS`, `OPENAEV INJECTORS` | The collector and injector ids, the optional NVD API key |
+| `XTM ONE` | Public URL, admin account, secret key, PostgreSQL role, S3 bucket, enterprise license, logs, the OpenSandbox switch and key |
+| `OPENCRQ` | Public URL, tenant of its connectors, admin token, S3 bucket |
+
+**Existing deployments.** Updating a stack that ran MinIO or Silo: read [From MinIO or Silo](#from-minio-or-silo) first: its first steps run before the `git pull`.
 
 A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line that names modules, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`. The only profile left is `opensandbox`: see [OpenSandbox](#opensandbox).
 
-### OpenCRQ
+**Memory.** Set `ELASTIC_MEMORY_SIZE` to `2G` on a 16 GB host, `4G` on 32 GB, `8G` on 64 GB and more.
 
-OpenCRQ starts with the rest of the stack, together with two one-shot services that prepare its storage on each start: `opencrq-db-init` creates its database in the shared `pgsql` instance, where OpenCRQ connects as `POSTGRES_USER` like OpenAEV, and `opencrq-bucket-init` creates its bucket in RustFS.
+**Workers.** The OpenCTI `worker` service runs 3 replicas (`deploy.replicas` in `modules/opencti.yml`); raise it for a higher ingestion throughput.
 
-OpenCRQ registers with XTM One with the same `PLATFORM_REGISTRATION_TOKEN`, and its OpenCTI and OpenAEV connectors are preconfigured with the admin tokens of both platforms. After the first start:
+**External access.** Behind a reverse proxy, set the public URL of each product; the calls inside the stack keep the service names:
 
-1. Create the first OpenCRQ admin in the setup wizard at http://localhost:8082. Use the `XTM_ONE_ADMIN_EMAIL` address: XTM One matches users by email.
-2. In **Integrations**, link a service account to the OpenCTI and OpenAEV connectors. For OpenCTI, also pick a live stream whose filter lets through the threats and their relationships (`targets`, `uses`, `attributed-to`): a stream filtered on threats alone delivers bare threats.
+```bash
+OPENCTI_EXTERNAL_SCHEME=https
+OPENCTI_HOST=opencti.example.com
+OPENCTI_PORT=443
+# the same for OPENAEV_*, OPENCRQ_* and XTM_ONE_*
+```
 
-Limitations:
+**OpenCRQ.** Two one-shot services prepare its storage on each start: `opencrq-db-init` creates its database in `pgsql`, where OpenCRQ connects as `POSTGRES_USER` like OpenAEV, and `opencrq-bucket-init` its bucket in RustFS. OpenCRQ registers with XTM One with `PLATFORM_REGISTRATION_TOKEN`. Its OpenCTI and OpenAEV connectors feed the tenant `OPENCRQ_TENANT_ID` names: see `.env.sample`. Its limits in this stack:
 
-- The OpenCRQ session cookie is `Secure`. Over plain HTTP, browsers accept it on `localhost` at most, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
-- The links OpenCRQ shows to OpenCTI and OpenAEV objects use the connector URLs, which are the internal `http://opencti:8080` and `http://openaev:8080`.
-- OpenCRQ takes its edition from the XTM license XTM One returns. Without one it runs Community Edition: a single tenant and no embedded Ask Ariane chat.
-- OpenCRQ adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance it shares with OpenAEV and XTM One.
+- Its session cookie is `Secure`: over plain HTTP, browsers accept it on `localhost` only, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
+- The links it shows to OpenCTI and OpenAEV objects use the internal connector URLs (`http://opencti:8080`, `http://openaev:8080`).
+- It adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance.
+- The automatic threat feed stream and the admin token as a bearer need OpenCRQ `0.261122.0` or later; the stack runs `filigran/opencrq:latest`. On an older OpenCRQ, link a service account to the connectors in **Integrations** by hand; OpenAEV cannot call it.
 
-### OpenSandbox
-
-XTM One runs the code of its agents in a sandbox: custom tools, the code interpreter, and the checks and services an agent starts in a repository workspace. These features are off until an administrator turns them on in XTM One. Without OpenSandbox, custom tools and the code interpreter run their code in a restricted process of the XTM One containers (`XTM_ONE_CUSTOM_TOOL_SANDBOX=auto`), and the checks and services of a repository workspace do not run.
+**OpenSandbox.** XTM One runs the code of its agents in a sandbox: custom tools, the code interpreter, and the checks and services an agent starts in a repository workspace. These features are off until an administrator turns them on in XTM One. Without OpenSandbox, custom tools and the code interpreter run their code in a restricted process of the XTM One containers (`XTM_ONE_CUSTOM_TOOL_SANDBOX=auto`), and the checks and services of a repository workspace do not run.
 
 The `opensandbox` profile adds the OpenSandbox server, which starts one isolated container per run. It is off by default: the server mounts the socket of the container engine to start those containers, which gives it control of every container of the host. To run it, set in `.env`:
 
@@ -191,89 +193,52 @@ XTM_ONE_CUSTOM_TOOL_SANDBOX=opensandbox
 
 `OPENSANDBOX_API_KEY`, which `init-env.sh` draws, is the key XTM One sends to the server. Then run `docker compose up -d`: `opensandbox` starts, and `xtm-one` and `xtm-one-worker` are recreated with the new setting. The containers it starts run the published images `xtmone/sandbox-python` and `xtmone/sandbox-nodejs` (`XTM_ONE_OPENSANDBOX_IMAGES`), with no network access unless `XTM_ONE_OPENSANDBOX_NETWORK_ALLOW` lists domains. Under rootless Podman, set `CONTAINER_ENGINE_SOCKET` to the socket of Podman, such as `$XDG_RUNTIME_DIR/podman/podman.sock`.
 
-### Memory Requirements
+## Included modules
 
-Adjust `ELASTIC_MEMORY_SIZE` based on your available RAM:
+| Product | Module | What it does |
+|---|---|---|
+| OpenCTI | Export File STIX, CSV, TXT | Export data in STIX 2.1, CSV or plain text |
+| OpenCTI | Import File STIX, Import File YARA | Import STIX 2.1 bundles and YARA rules |
+| OpenCTI | Import Document, Analysis | Import and analyse PDF, HTML and text documents |
+| OpenCTI | Import External Reference | Import external references |
+| OpenCTI | OpenCTI Datasets, MITRE ATT&CK | Default marking definitions and identities, the ATT&CK framework |
+| OpenAEV | MITRE ATT&CK, OpenAEV Datasets | Attack techniques, default datasets and configurations |
+| OpenAEV | Atomic Red Team | Red Canary's Atomic Red Team tests |
+| OpenAEV | NVD NIST CVE | CVE data from NVD (an API key is recommended) |
+| OpenAEV | Nmap, Nuclei injectors | Network and vulnerability scanning |
 
-| Total RAM | Recommended Setting |
-|-----------|---------------------|
-| 16GB | `2G` |
-| 32GB | `4G` |
-| 64GB+ | `8G` |
-
-### Scaling Workers
-
-Modify the worker replicas in `modules/opencti.yml`:
-
-```yaml
-worker:
-  deploy:
-    mode: replicated
-    replicas: 3  # Increase for higher throughput
-```
-
-### External Access
-
-To expose the platforms externally (behind reverse-proxy for instance), update the environment variables:
+## Operations
 
 ```bash
-OPENCTI_EXTERNAL_SCHEME=https
-OPENCTI_HOST=opencti.yourdomain.com
-OPENCTI_PORT=443
-
-OPENAEV_EXTERNAL_SCHEME=https
-OPENAEV_HOST=openaev.yourdomain.com
-OPENAEV_PORT=443
-
-OPENCRQ_EXTERNAL_SCHEME=https
-OPENCRQ_HOST=opencrq.yourdomain.com
-OPENCRQ_PORT=443
+docker compose ps                    # state and health of every service
+docker compose logs -f opencrq       # follow one service (opencti, openaev, xtm-one, ...)
+docker compose down                  # stop the stack, data kept
+docker compose down -v               # stop and DELETE every volume
 ```
 
-## Common Operations
-
-### View logs
+## Upgrade
 
 ```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f opencti
-docker compose logs -f openaev
+git pull
+docker compose pull
+docker compose up -d
 ```
 
-### Check service health
+Read the release notes of each product before an upgrade, and compare your `.env` with [`.env.sample`](.env.sample): a new block needs its values before the first start of the new version (a deployment that predates OpenCRQ needs `OPENCRQ_ADMIN_TOKEN`).
 
-```bash
-docker compose ps
-```
-
-### Stop the stack
-
-```bash
-docker compose down
-```
-
-### Reset data (destructive)
-
-```bash
-docker compose down -v
-```
-
-### Upgrade a stack that ran MinIO or Silo
+### From MinIO or Silo
 
 The `minio` service runs [RustFS](https://rustfs.com), an open source (Apache 2.0) S3-compatible object storage. The service name, the `s3data` volume and the `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` variables keep their former names, so the OpenCTI, OpenAEV, OpenCRQ and XTM One settings do not change.
 
 RustFS does not start on an `s3data` volume written by MinIO or Silo (`Permission denied`: that volume belongs to root, RustFS runs as uid 10001). The volume (`xtm_s3data` with the project name of `.env.sample`) holds the buckets of OpenCTI, OpenAEV, OpenCRQ and XTM One. Back it up and move it with the migration guide listed in the [breaking changes of the OpenCTI documentation](https://docs.opencti.io/latest/deployment/breaking-changes/) (the [OpenAEV breaking changes](https://docs.openaev.io/latest/deployment/breaking-changes/) list the same move) before the next `docker compose up -d` with this compose file, then check a file in each platform. The guide's first steps run with the previous compose file: if you update this clone with `git pull`, run them before the pull.
 
-If your stack ran a `pgsql-xtm-one` container (separate PostgreSQL instances), follow [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) too: dump the databases and back up the storage volume before the pull, and start the stack only once the databases are restored and the storage is moved.
+If your stack ran a `pgsql-xtm-one` container (separate PostgreSQL instances), follow [From separate PostgreSQL instances](#from-separate-postgresql-instances) too: dump the databases and back up the storage volume before the pull, and start the stack only once the databases are restored and the storage is moved.
 
-Started without moving the storage: `docker compose up -d` stops on the unhealthy `minio` service (`docker compose logs minio` shows `Permission denied`), and the data of the volume is unchanged. The guide explains how to go back to the previous storage service. If your stack ran a `pgsql-xtm-one` container, read the last paragraph of [Upgrade from separate PostgreSQL instances](#upgrade-from-separate-postgresql-instances) before running `docker compose up -d` again.
+Started without moving the storage: `docker compose up -d` stops on the unhealthy `minio` service (`docker compose logs minio` shows `Permission denied`), and the data of the volume is unchanged. The guide explains how to go back to the previous storage service. If your stack ran a `pgsql-xtm-one` container, read the last paragraph of [Upgrade from separate PostgreSQL instances](#from-separate-postgresql-instances) before running `docker compose up -d` again.
 
-### Upgrade from separate PostgreSQL instances
+### From separate PostgreSQL instances
 
-Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. These versions also ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: the storage has to be moved too before the final `docker compose up -d`. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
+Earlier versions of this stack ran two PostgreSQL containers: `pgsql` for OpenAEV and `pgsql-xtm-one` for XTM One. OpenAEV and XTM One now share one pgvector instance, on a new `pgsqlshareddata` volume, and the old volumes are left untouched. To keep your data, dump both databases **before** you pull the new version:
 
 ```bash
 docker compose stop openaev xtm-one xtm-one-worker
@@ -302,41 +267,38 @@ If you started the new version before dumping, your data is still in the old vol
 
 ## Troubleshooting
 
-### Services not starting
+**A service does not start.** Read `docker compose ps` and `docker compose logs <service>`. Elasticsearch needs `vm.max_map_count=262144` on the host. A one-shot init service (`xtm-one-db-init`, `opencrq-db-init`, `opencrq-bucket-init`) that exits with an error keeps its product down: it usually names the missing `.env` value.
 
-1. Check if Elasticsearch has enough virtual memory:
-   ```bash
-   sudo sysctl -w vm.max_map_count=262144
-   ```
+**Check each integration direction.** First that the caller reaches the callee on the internal network, then what the callee shows:
 
-2. Verify all environment variables are set in `.env`
+| Direction | Reachability | What to look at |
+|---|---|---|
+| OpenCTI → XTM One | `docker compose exec opencti wget -qO- http://xtm-one:4000/api/health` | XTM One, **Settings** → **MCP Endpoint**: OpenCTI reports `Connected`; the AI assistant appears in OpenCTI |
+| OpenAEV → XTM One | `docker compose exec openaev wget -qO- http://xtm-one:4000/api/health` | Same, for OpenAEV |
+| OpenCRQ → XTM One | `docker compose exec opencrq wget -qO- http://xtm-one:4000/api/health` | Same, for OpenCRQ; sign-in to OpenCRQ through XTM One works |
+| XTM One → each product | `docker compose exec xtm-one curl -fsS http://opencti:8080/health?health_access_key=$OPENCTI_HEALTHCHECK_ACCESS_KEY` (OpenAEV: `http://openaev:8080/api/health?health_access_key=...`) | An agent answer on the product's data; a `401` means `XTM JWT rejected` in `docker compose logs xtm-one`, which names the issuer, audience or key URL that did not match |
+| OpenCTI ⇄ OpenAEV | `docker compose exec opencti wget -qO- "http://openaev:8080/api/health?health_access_key=$OPENAEV_HEALTHCHECK_KEY"` | OpenAEV's coverage connector in the connector list of OpenCTI |
+| OpenCRQ → OpenCTI | `docker compose exec opencrq wget -qO- "http://opencti:8080/health?health_access_key=$OPENCTI_HEALTHCHECK_ACCESS_KEY"` | The "OpenCRQ threat feed" live stream in OpenCTI's data sharing |
+| OpenCRQ → OpenAEV | `docker compose exec opencrq wget -qO- "http://openaev:8080/api/health?health_access_key=$OPENAEV_HEALTHCHECK_KEY"` | The OpenAEV connector in OpenCRQ **Integrations** |
+| OpenAEV → OpenCRQ | `docker compose exec openaev wget -S --spider http://opencrq:3002/` (any HTTP status answers: the port is reached) | The OpenCRQ pivots and product switcher in OpenAEV |
 
-3. Check logs for specific errors:
-   ```bash
-   docker compose logs <service-name>
-   ```
+The `$...` values are read from your shell: export them from `.env` first, or paste them. When every direction is reachable and a product still shows as not connected, check that `PLATFORM_REGISTRATION_TOKEN` and the admin tokens are the same on both sides, that the clocks of the host are synchronised (the tokens between the products live 10 minutes), and see the [XTM One troubleshooting](https://docs.xtmone.io/latest/deployment/troubleshooting/) page.
 
-### OpenCTI/OpenAEV not connecting
-
-1. Ensure all dependency services are healthy
-2. Verify tokens match between services
-3. Check network connectivity within Docker network
+**OpenAEV fails to register its coverage connector in OpenCTI.** OpenAEV sends a GraphQL introspection query that OpenCTI refuses by default since `7.261109.0`. The compose file allows it on OpenCTI (`APP__GRAPHQL__PLAYGROUND__FORCE_DISABLED_INTROSPECTION=false`) until a released OpenAEV no longer needs it ([OpenAEV-Platform/openaev#9647](https://github.com/OpenAEV-Platform/openaev/issues/9647)).
 
 ## Community
 
-### Status & Bugs
+- **Questions and discussion**: the Filigran [community Slack](https://community.filigran.io).
+- **Bugs in this stack**: [issues of this repository](https://github.com/FiligranHQ/xtm-docker/issues).
+- **Bugs in a product**: [XTM One](https://github.com/XTM-One-Platform/xtm-one/issues), [OpenCTI](https://github.com/OpenCTI-Platform/opencti/issues), [OpenAEV](https://github.com/OpenAEV-Platform/openaev/issues), [OpenCRQ](https://github.com/OpenCRQ-Platform/opencrq/issues).
+- **Contributing**: read the [contributing guide](CONTRIBUTING.md).
 
-If you wish to report bugs or request new features:
+## About Filigran
 
-- **OpenCTI**: [GitHub Issues](https://github.com/OpenCTI-Platform/opencti/issues)
-- **OpenAEV**: [GitHub Issues](https://github.com/OpenAEV-Platform/openaev/issues)
+The XTM Platform is designed and developed by [Filigran](https://filigran.io), the company behind the XTM Platform for Agentic CTEM.
 
-### Discussion
-
-For support or discussions about the XTM stack, join us on our [Slack channel](https://community.filigran.io) or email us at contact@filigran.io.
-
-## About
-
-XTM is a product suite designed and developed by [Filigran](https://filigran.io).
-
-<a href="https://filigran.io" alt="Filigran"><img src="https://github.com/OpenCTI-Platform/opencti/raw/master/.github/img/logo_filigran.png" width="300" /></a>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/filigran-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./.github/img/readme/filigran-light.svg">
+  <img alt="Filigran" src="./.github/img/readme/filigran-light.svg" width="240">
+</picture>

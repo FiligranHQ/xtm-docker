@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1120" viewBox="0 0 1440 1120" role="img" aria-label="Cross-product integrations of the XTM Platform Docker stack">
+<title>Cross-product integrations of the XTM Platform Docker stack</title>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0 1L10 5L0 9z" fill="#0FBCFF"/></marker>
+<marker id="arrm" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0 1L10 5L0 9z" fill="#A9B1C6"/></marker>
+</defs>
+<rect width="1440" height="1120" rx="24" fill="#0A0C1C"/>
+
+<text x="56" y="82" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="600" fill="#FBFBFB" text-anchor="start">Who calls whom</text>
+<text x="56" y="118" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="400" fill="#A9B1C6" text-anchor="start">Every call inside the stack goes to the service name; the credentials come from .env and need no step by hand.</text>
+<line x1="359.0" y1="281.0" x2="611.0" y2="399.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="485.0" cy="340.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="485.0" y="346.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">1</text>
+<line x1="1081.0" y1="281.0" x2="829.0" y2="399.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="955.0" cy="340.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="955.0" y="346.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">1</text>
+<line x1="720.0" y1="649.0" x2="720.0" y2="501.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="720.0" cy="575.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="720.0" y="581.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">1</text>
+<line x1="403.0" y1="230.0" x2="1037.0" y2="230.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="720.0" cy="230.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="720.0" y="236.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">2</text>
+<line x1="669.0" y1="649.0" x2="301.0" y2="281.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="485.0" cy="465.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="485.0" y="471.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">3</text>
+<line x1="771.0" y1="649.0" x2="1139.0" y2="281.0" stroke="#0FBCFF" stroke-width="2.5" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<circle cx="955.0" cy="465.0" r="22" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="955.0" y="471.0" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0FBCFF" text-anchor="middle">4</text>
+<rect x="570.0" y="402.0" width="300" height="96" rx="48.0" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<text x="720" y="448" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#FBFBFB" text-anchor="middle">XTM One</text>
+<text x="720" y="478" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="middle">agentic core  ·  xtm-one:4000</text>
+<rect x="100.0" y="182.0" width="300" height="96" rx="48.0" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<text x="250" y="228" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#FBFBFB" text-anchor="middle">OpenCTI</text>
+<text x="250" y="258" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="middle">opencti:8080</text>
+<rect x="1040.0" y="182.0" width="300" height="96" rx="48.0" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<text x="1190" y="228" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#FBFBFB" text-anchor="middle">OpenAEV</text>
+<text x="1190" y="258" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="middle">openaev:8080</text>
+<rect x="570.0" y="652.0" width="300" height="96" rx="48.0" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
+<text x="720" y="698" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#FBFBFB" text-anchor="middle">OpenCRQ</text>
+<text x="720" y="728" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="middle">opencrq:3002</text>
+<text x="100" y="320" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">worker, connectors and</text>
+<text x="100" y="342" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">XTM Composer call OpenCTI</text>
+<text x="100" y="364" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">with OPENCTI_ADMIN_TOKEN</text>
+<text x="1340" y="320" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="end">collectors, injectors and</text>
+<text x="1340" y="342" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="end">XTM Composer call OpenAEV</text>
+<text x="1340" y="364" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="end">with OPENAEV_ADMIN_TOKEN</text>
+<rect x="56" y="800" width="1328" height="284" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
+<circle cx="98" cy="844" r="20" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="98" y="850" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0FBCFF" text-anchor="middle">1</text>
+<text x="132" y="844" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCTI, OpenAEV, OpenCRQ  ⇄  XTM One</text>
+<text x="132" y="868" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="start">Registration and Ask AI with PLATFORM_REGISTRATION_TOKEN; then short-lived per-user tokens, both ways</text>
+<circle cx="98" cy="908" r="20" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="98" y="914" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0FBCFF" text-anchor="middle">2</text>
+<text x="132" y="908" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCTI  ⇄  OpenAEV</text>
+<text x="132" y="932" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCTI calls OpenAEV with OPENAEV_ADMIN_TOKEN; OpenAEV calls OpenCTI with OPENCTI_ADMIN_TOKEN</text>
+<circle cx="98" cy="972" r="20" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="98" y="978" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0FBCFF" text-anchor="middle">3</text>
+<text x="132" y="972" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCRQ  ⇄  OpenCTI</text>
+<text x="132" y="996" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCRQ connector with OPENCTI_ADMIN_TOKEN (its threat feed live stream); OpenCTI links to OpenCRQ by URL</text>
+<circle cx="98" cy="1036" r="20" fill="#0A0C1C" stroke="#0FBCFF" stroke-width="2"/>
+<text x="98" y="1042" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0FBCFF" text-anchor="middle">4</text>
+<text x="132" y="1036" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">OpenCRQ  ⇄  OpenAEV</text>
+<text x="132" y="1060" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenCRQ connector with OPENAEV_ADMIN_TOKEN (bulk snapshots); OpenAEV calls OpenCRQ with OPENCRQ_ADMIN_TOKEN</text>
+</svg>

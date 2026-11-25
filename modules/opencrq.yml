@@ -56,6 +56,11 @@ services:
       - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
       - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
+      # Admin token, an admin bearer on the API like OpenCTI's: OpenAEV calls OpenCRQ with it
+      - APP__ADMIN__TOKEN=${OPENCRQ_ADMIN_TOKEN}
+      # Product switcher
+      - XTM__OPENCTI_URL=${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}
+      - XTM__OPENAEV_URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
       # XTM One, which OpenCRQ requires: it refuses to start without these three
       - XTM_ONE__URL=http://xtm-one:4000
       - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}

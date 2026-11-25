@@ -1,0 +1,29 @@
+name: Validate Compose file
+
+on:
+  pull_request:
+    paths:
+      - docker-compose.yml
+      - infra/**
+      - modules/**
+      - init.yml
+      - .env.sample
+      - .github/workflows/validate-compose.yml
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-compose:
+    name: docker compose config
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render the Compose file with .env.sample
+        run: |
+          set -euo pipefail
+          cp .env.sample .env
+          docker compose config --quiet
+          docker compose --profile opensandbox config --quiet
