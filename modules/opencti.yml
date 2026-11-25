@@ -43,6 +43,9 @@ services:
       - XTM__XTM_ONE_TOKEN=${PLATFORM_REGISTRATION_TOKEN}
       # OpenCRQ: the product switcher and the pivots open this instance
       - XTM__OPENCRQ_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
+      # The same URL under OpenCRQ's former name, OpenGRC: OpenCTI releases up to 7.261119.0
+      # read only this one, later ones fall back to it. Remove once no supported release needs it.
+      - XTM__OPENGRC_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
       # OpenAEV sends a `__type` introspection query before registering its Coverage
       # connector, refused by default since OpenCTI 7.261109.0 (OpenAEV-Platform/openaev#9647).
       # Remove once a released OpenAEV no longer needs it.

@@ -88,7 +88,7 @@ Inside the stack every call goes to the service name (`http://xtm-one:4000`, `ht
 | OpenCRQ | OpenCTI | `OPENCTI_ADMIN_TOKEN` | OpenCRQ connector; OpenCRQ creates and binds its "OpenCRQ threat feed" live stream at start |
 | OpenCRQ | OpenAEV | `OPENAEV_ADMIN_TOKEN` | OpenCRQ connector reading the bulk snapshots (`BULK_SNAPSHOT_EXPORT` preview feature, enabled on OpenAEV) |
 | OpenAEV | OpenCRQ | `OPENCRQ_ADMIN_TOKEN` | Pivots and product switcher (`OPENAEV_XTM_OPENCRQ_*`) |
-| OpenCTI | OpenCRQ | none | Product switcher link (`XTM__OPENCRQ_URL`) |
+| OpenCTI | OpenCRQ | none | Product switcher link (`XTM__OPENCRQ_URL`, and `XTM__OPENGRC_URL` for releases up to 7.261119.0) |
 | OpenCTI worker and connectors, XTM Composer | OpenCTI | `OPENCTI_ADMIN_TOKEN` | Ingestion and connector management |
 | OpenAEV collectors and injectors, XTM Composer | OpenAEV | `OPENAEV_ADMIN_TOKEN` | Collection, injection and collector management |
 
