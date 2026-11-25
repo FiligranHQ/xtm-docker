@@ -127,7 +127,6 @@ services:
 
   xtm-composer:
     image: filigran/xtm-composer:latest
-    platform: linux/amd64
     environment:
       - MANAGER__ID=${XTM_COMPOSER_ID}
       - MANAGER__NAME=OpenCTI Connector Manager
