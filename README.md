@@ -160,7 +160,7 @@ Sign in to XTM One, OpenCTI and OpenAEV with the admin email and password of eac
 
 Updating a stack that ran MinIO or Silo: read [Upgrade a stack that ran MinIO or Silo](#upgrade-a-stack-that-ran-minio-or-silo) first: its first steps run before the `git pull`.
 
-A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`.
+A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line that names modules, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`. The only profile left is `opensandbox`: see [OpenSandbox](#opensandbox).
 
 ### OpenCRQ
 
@@ -177,6 +177,19 @@ Limitations:
 - The links OpenCRQ shows to OpenCTI and OpenAEV objects use the connector URLs, which are the internal `http://opencti:8080` and `http://openaev:8080`.
 - OpenCRQ takes its edition from the XTM license XTM One returns. Without one it runs Community Edition: a single tenant and no embedded Ask Ariane chat.
 - OpenCRQ adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance it shares with OpenAEV and XTM One.
+
+### OpenSandbox
+
+XTM One runs the code of its agents in a sandbox: custom tools, the code interpreter, and the checks and services an agent starts in a repository workspace. These features are off until an administrator turns them on in XTM One. Without OpenSandbox, custom tools and the code interpreter run their code in a restricted process of the XTM One containers (`XTM_ONE_CUSTOM_TOOL_SANDBOX=auto`), and the checks and services of a repository workspace do not run.
+
+The `opensandbox` profile adds the OpenSandbox server, which starts one isolated container per run. It is off by default: the server mounts the socket of the container engine to start those containers, which gives it control of every container of the host. To run it, set in `.env`:
+
+```bash
+COMPOSE_PROFILES=opensandbox
+XTM_ONE_CUSTOM_TOOL_SANDBOX=opensandbox
+```
+
+`OPENSANDBOX_API_KEY`, which `init-env.sh` draws, is the key XTM One sends to the server. Then run `docker compose up -d`: `opensandbox` starts, and `xtm-one` and `xtm-one-worker` are recreated with the new setting. The containers it starts run the published images `xtmone/sandbox-python` and `xtmone/sandbox-nodejs` (`XTM_ONE_OPENSANDBOX_IMAGES`), with no network access unless `XTM_ONE_OPENSANDBOX_NETWORK_ALLOW` lists domains. Under rootless Podman, set `CONTAINER_ENGINE_SOCKET` to the socket of Podman, such as `$XDG_RUNTIME_DIR/podman/podman.sock`.
 
 ### Memory Requirements
 

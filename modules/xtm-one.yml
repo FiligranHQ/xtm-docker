@@ -63,6 +63,20 @@ services:
       # OPENAEV_XTM_ONE_URL): accepted as the audience of the tokens they send,
       # for versions that address them to that URL instead of the BASE_URL above
       - XTM_AUTH_ACCEPTED_AUDIENCES=http://xtm-one:4000
+      # Where custom tools and the code interpreter run their code, once an administrator turns
+      # them on (both are off by default): `auto` here, `opensandbox` with the opensandbox
+      # profile below (XTM_ONE_CUSTOM_TOOL_SANDBOX in .env)
+      - CUSTOM_TOOL_SANDBOX=${XTM_ONE_CUSTOM_TOOL_SANDBOX:-auto}
+      - OPENSANDBOX_DOMAIN=opensandbox:8090
+      - OPENSANDBOX_PROTOCOL=http
+      - OPENSANDBOX_API_KEY=${OPENSANDBOX_API_KEY:-}
+      # XTM One's defaults name images built locally: run the published ones, at the tags
+      # of the XTM One release (sandbox-python and sandbox-nodejs 0.4 for 1.261119.1)
+      - OPENSANDBOX_IMAGES=${XTM_ONE_OPENSANDBOX_IMAGES:-python:docker.io/xtmone/sandbox-python:0.4,nodejs:docker.io/xtmone/sandbox-nodejs:0.4}
+      - OPENSANDBOX_NETWORK_ALLOW=${XTM_ONE_OPENSANDBOX_NETWORK_ALLOW:-}
+    # The sandboxes OpenSandbox starts publish their ports on the host, as host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${XTM_ONE_PORT}:4000"
     depends_on:
@@ -104,7 +118,49 @@ services:
       - LOG_LEVEL=${XTM_ONE_LOG_LEVEL:-info}
       - LOG_FORMAT=${XTM_ONE_LOG_FORMAT:-json}
       - ENTERPRISE_LICENSE=${XTM_ONE_ENTERPRISE_LICENSE:-}
+      # Where custom tools and the code interpreter run their code, once an administrator turns
+      # them on (both are off by default): `auto` here, `opensandbox` with the opensandbox
+      # profile below (XTM_ONE_CUSTOM_TOOL_SANDBOX in .env)
+      - CUSTOM_TOOL_SANDBOX=${XTM_ONE_CUSTOM_TOOL_SANDBOX:-auto}
+      - OPENSANDBOX_DOMAIN=opensandbox:8090
+      - OPENSANDBOX_PROTOCOL=http
+      - OPENSANDBOX_API_KEY=${OPENSANDBOX_API_KEY:-}
+      # XTM One's defaults name images built locally: run the published ones, at the tags
+      # of the XTM One release (sandbox-python and sandbox-nodejs 0.4 for 1.261119.1)
+      - OPENSANDBOX_IMAGES=${XTM_ONE_OPENSANDBOX_IMAGES:-python:docker.io/xtmone/sandbox-python:0.4,nodejs:docker.io/xtmone/sandbox-nodejs:0.4}
+      - OPENSANDBOX_NETWORK_ALLOW=${XTM_ONE_OPENSANDBOX_NETWORK_ALLOW:-}
+    # The sandboxes OpenSandbox starts publish their ports on the host, as host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       xtm-one:
         condition: service_healthy
     restart: always
+
+  # Runs the code of custom tools, of the code interpreter and of the checks and services an
+  # agent starts in a repository workspace, one container per run. Optional: it starts with the
+  # opensandbox profile only (COMPOSE_PROFILES=opensandbox in .env), together with
+  # XTM_ONE_CUSTOM_TOOL_SANDBOX=opensandbox and OPENSANDBOX_API_KEY. It starts those containers
+  # through the socket of the container engine, which gives it control of the host's containers.
+  opensandbox:
+    image: opensandbox/server:${OPENSANDBOX_SERVER_IMAGE_TAG:-v0.2.1}
+    profiles: ["opensandbox"]
+    environment:
+      # The server refuses to start without a key: init-env.sh draws one
+      - OPENSANDBOX_SERVER_API_KEY=${OPENSANDBOX_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # The socket of the container engine (CONTAINER_ENGINE_SOCKET, such as
+    # $XDG_RUNTIME_DIR/podman/podman.sock under rootless Podman). Unlabeled, so that the server
+    # can use it on an SELinux host, where the container is then not confined by SELinux.
+    security_opt:
+      - label=disable
+    volumes:
+      - ${CONTAINER_ENGINE_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ./modules/opensandbox.toml:/etc/opensandbox/config.toml:ro,z
+    restart: always
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

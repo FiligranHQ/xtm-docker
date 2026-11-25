@@ -21,6 +21,7 @@ tr -d '\r' < .env.sample | while IFS= read -r line || [ -n "$line" ]; do
     SMTP_USERNAME|SMTP_PASSWORD|IMAP_HOST|IMAP_USERNAME|IMAP_PASSWORD) printf '%s=\n' "$key"; continue ;;
     OPENCTI_ENCRYPTION_KEY) value=$(b64) ;;
     *_ADMIN_TOKEN|*HEALTHCHECK*) value=$(uuid) ;;
+    OPENSANDBOX_API_KEY) value=$(hex) ;;
     *PASSWORD*|*_PASS|*SECRET*|*SALT*|*REGISTRATION_TOKEN|*ENCRYPTION_KEY) value=$(hex) ;;
     *) printf '%s\n' "$line"; continue ;;
   esac
