@@ -22,7 +22,7 @@
 <text x="80" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
 <rect x="80" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="129.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
 <rect x="186.0" y="488" width="56" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="214.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Redis</text>
-<rect x="250.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="273.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<rect x="250.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="273.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RustFS</text>
 <line x1="550.0" y1="206" x2="550.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
 <rect x="396" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
 <rect x="396" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
@@ -36,7 +36,7 @@
 <rect x="420" y="488" width="123" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="481.6" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Elasticsearch</text>
 <rect x="551.2" y="488" width="56" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="579.2" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Redis</text>
 <rect x="420" y="522" width="81" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="460.6" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RabbitMQ</text>
-<rect x="509.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="533.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<rect x="509.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="533.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RustFS</text>
 <line x1="890.0" y1="206" x2="890.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
 <rect x="736" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
 <rect x="736" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
@@ -48,7 +48,7 @@
 <text x="760" y="428" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="400" fill="#FBFBFB" text-anchor="start">· opencrq-bucket-init</text>
 <text x="760" y="476" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#A9B1C6" text-anchor="start">Uses</text>
 <rect x="760" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="809.0" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
-<rect x="866.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="889.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<rect x="866.0" y="488" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="889.8" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RustFS</text>
 <line x1="1230.0" y1="206" x2="1230.0" y2="258" stroke="#A9B1C6" stroke-width="1.5" marker-end="url(#arrm)"/>
 <rect x="1076" y="262" width="308" height="300" rx="18" fill="#0D172B" stroke="#0FBCFF" stroke-width="2.5"/>
 <rect x="1076" y="262" width="308" height="8" rx="4" fill="#0FBCFF"/>
@@ -62,7 +62,7 @@
 <rect x="1100" y="488" width="123" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1161.6" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Elasticsearch</text>
 <rect x="1231.2" y="488" width="98" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1280.2" y="506" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">PostgreSQL</text>
 <rect x="1100" y="522" width="81" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1140.6" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RabbitMQ</text>
-<rect x="1189.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1213.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">Silo</text>
+<rect x="1189.2" y="522" width="48" height="26" rx="13" fill="#111E36" stroke="#1F3965" stroke-width="1"/><text x="1213.0" y="540" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#A9B1C6" text-anchor="middle">RustFS</text>
 <rect x="56" y="596" width="1328" height="56" rx="14" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
 <text x="80" y="631" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">XTM Composer</text>
 <text x="232" y="631" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#A9B1C6" text-anchor="start">manages the connectors of OpenCTI and the collectors of OpenAEV through the Docker socket</text>
@@ -76,7 +76,7 @@
 <text x="346.4" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">pgsql</text>
 <text x="346.4" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">OpenAEV, XTM One, OpenCRQ</text>
 <rect x="596.8" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>
-<text x="616.8" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">Silo (S3)</text>
+<text x="616.8" y="760" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#FBFBFB" text-anchor="start">RustFS (S3)</text>
 <text x="616.8" y="788" font-family="'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="500" fill="#0FBCFF" text-anchor="start">:9000</text>
 <text x="616.8" y="824" font-family="Geologica, Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#A9B1C6" text-anchor="start">every product</text>
 <rect x="867.1999999999999" y="720" width="246.4" height="132" rx="18" fill="#0D172B" stroke="#1F3965" stroke-width="1.5"/>

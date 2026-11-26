@@ -1,0 +1,97 @@
+services:
+
+  ###########################
+  # OPENCRQ                 #
+  ###########################
+
+  # Role and database of OpenCRQ in the shared pgsql instance. The role owns its database and is not a
+  # superuser. Unlike /docker-entrypoint-initdb.d, it also runs on a volume created before OpenCRQ joined.
+  opencrq-db-init:
+    image: pgvector/pgvector:pg17
+    environment:
+      PGHOST: pgsql
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      XTM_ONE_POSTGRES_USER: ${XTM_ONE_POSTGRES_USER}
+      OPENCRQ_POSTGRES_USER: ${OPENCRQ_POSTGRES_USER:-opencrq}
+      OPENCRQ_POSTGRES_PASSWORD: ${OPENCRQ_POSTGRES_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        [ -n "$$OPENCRQ_POSTGRES_PASSWORD" ] || { echo "OPENCRQ_POSTGRES_PASSWORD is not set in .env" >&2; exit 1; }
+        [ "$$OPENCRQ_POSTGRES_USER" != "$$PGUSER" ] && [ "$$OPENCRQ_POSTGRES_USER" != "$$XTM_ONE_POSTGRES_USER" ] || { echo "OPENCRQ_POSTGRES_USER must differ from POSTGRES_USER and XTM_ONE_POSTGRES_USER: OpenCRQ needs a role of its own" >&2; exit 1; }
+        psql -v ON_ERROR_STOP=1 -v role="$$OPENCRQ_POSTGRES_USER" -v pw="$$OPENCRQ_POSTGRES_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
+        SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'pw') \gexec
+        SELECT format('CREATE DATABASE opencrq OWNER %I', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'opencrq') \gexec
+        SQL
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    restart: "no"
+
+  # OpenCRQ does not create its bucket in production: it stops at boot when it is missing.
+  # RustFS has no client of its own: the AWS CLI speaks its S3 API.
+  opencrq-bucket-init:
+    image: amazon/aws-cli:latest
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
+      OPENCRQ_S3_BUCKET: ${OPENCRQ_S3_BUCKET:-opencrq}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - aws --endpoint-url http://minio:9000 s3api head-bucket --bucket "$$OPENCRQ_S3_BUCKET" 2>/dev/null || aws --endpoint-url http://minio:9000 s3api create-bucket --bucket "$$OPENCRQ_S3_BUCKET"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  opencrq:
+    image: filigran/opencrq:latest
+    environment:
+      - HTTP_SERVER__HOST=0.0.0.0
+      - HTTP_SERVER__PORT=3002
+      - HEALTHCHECK_HTTP_SERVER__PORT=8444
+      - POSTGRES__HOST=pgsql
+      - POSTGRES__PORT=5432
+      - POSTGRES__DATABASE=opencrq
+      - POSTGRES__USER=${OPENCRQ_POSTGRES_USER:-opencrq}
+      - POSTGRES__PASSWORD=${OPENCRQ_POSTGRES_PASSWORD}
+      - FILE_STORAGE__ENDPOINT=http://minio:9000
+      - FILE_STORAGE__ACCESS_KEY=${MINIO_ROOT_USER}
+      - FILE_STORAGE__SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - FILE_STORAGE__BUCKET=${OPENCRQ_S3_BUCKET:-opencrq}
+      # Admin token, an admin bearer on the API like OpenCTI's: OpenAEV calls OpenCRQ with it
+      - APP__ADMIN__TOKEN=${OPENCRQ_ADMIN_TOKEN}
+      # Product switcher
+      - XTM__OPENCTI_URL=${OPENCTI_EXTERNAL_SCHEME}://${OPENCTI_HOST}:${OPENCTI_PORT}
+      - XTM__OPENAEV_URL=${OPENAEV_EXTERNAL_SCHEME}://${OPENAEV_HOST}:${OPENAEV_PORT}
+      # XTM One, which OpenCRQ requires: it refuses to start without these three
+      - XTM_ONE__URL=http://xtm-one:4000
+      - XTM_ONE__TOKEN=${PLATFORM_REGISTRATION_TOKEN}
+      - XTM_ONE__PLATFORM_URL=${OPENCRQ_EXTERNAL_SCHEME:-http}://${OPENCRQ_HOST:-localhost}:${OPENCRQ_PORT:-8082}
+      # OpenCTI and OpenAEV connectors, keyed by the id of the tenant they feed. A new OpenCRQ has no
+      # tenant: its first one is created in OpenCRQ, then its id goes in OPENCRQ_TENANT_ID. Until then
+      # the default, a valid id no tenant has, keeps OpenCRQ starting and the connectors idle.
+      - CONNECTORS__OPENCTI__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__URL=http://opencti:8080
+      - CONNECTORS__OPENCTI__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTORS__OPENAEV__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__URL=http://openaev:8080
+      - CONNECTORS__OPENAEV__${OPENCRQ_TENANT_ID:-01a043da-ff47-72c2-aaa4-7da56d85c83e}__TOKEN=${OPENAEV_ADMIN_TOKEN}
+    ports:
+      - "8082:3002" # If you change the host port (the left one) do not forget to update OPENCRQ_PORT in your .env
+    depends_on:
+      opencrq-db-init:
+        condition: service_completed_successfully
+      opencrq-bucket-init:
+        condition: service_completed_successfully
+      xtm-one:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8444/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
