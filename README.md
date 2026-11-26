@@ -46,13 +46,28 @@ The XTM Platform has five products. Each owns stages of the CTEM loop; XTM One r
 
 ## Architecture
 
-One Compose project: the four products, their workers and modules, XTM Composer to manage the connectors and collectors, and one shared infrastructure. PostgreSQL holds one database each for OpenAEV, XTM One and OpenCRQ; Silo (S3) one bucket per product.
+One Compose project: the four products, their workers and modules, XTM Composer to manage the connectors and collectors, and one shared infrastructure. PostgreSQL holds one database each for OpenAEV, XTM One and OpenCRQ; RustFS (S3) one bucket per product.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./.github/img/readme/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="./.github/img/readme/architecture-light.svg">
-  <img alt="Architecture of the stack: the browser reaches XTM One on 8090, OpenCTI on 8080, OpenCRQ on 8082 and OpenAEV on 8081; each product runs with its workers and modules; XTM Composer manages the connectors and collectors; Elasticsearch, PostgreSQL with pgvector, Silo, RabbitMQ and Redis are shared" src="./.github/img/readme/architecture-light.svg" width="100%">
+  <img alt="Architecture of the stack: the browser reaches XTM One on 8090, OpenCTI on 8080, OpenCRQ on 8082 and OpenAEV on 8081; each product runs with its workers and modules; XTM Composer manages the connectors and collectors; Elasticsearch, PostgreSQL with pgvector, RustFS, RabbitMQ and Redis are shared" src="./.github/img/readme/architecture-light.svg" width="100%">
 </picture>
+
+`docker-compose.yml` includes one file per part of the stack:
+
+| File | Services |
+|------|----------|
+| `infra/redis.yml` | Redis |
+| `infra/elasticsearch.yml` | Elasticsearch |
+| `infra/postgresql.yml` | PostgreSQL + pgvector |
+| `infra/rustfs.yml` | RustFS (S3) |
+| `infra/rabbitmq.yml` | RabbitMQ, with `infra/rabbitmq.conf` |
+| `modules/xtm-one.yml` | XTM One, its worker and the initialisation of its database |
+| `modules/opencti.yml` | OpenCTI, its worker and the default OpenCTI connectors |
+| `modules/openaev.yml` | OpenAEV and the default OpenAEV collectors and injectors |
+| `modules/opencrq.yml` | OpenCRQ and the initialisation of its database and bucket |
+| `modules/xtm-composer.yml` | XTM Composer and the generation of its RSA key |
 
 ## Integrations
 
@@ -73,7 +88,7 @@ Inside the stack every call goes to the service name (`http://xtm-one:4000`, `ht
 | OpenCRQ | OpenCTI | `OPENCTI_ADMIN_TOKEN` | OpenCRQ connector; OpenCRQ creates and binds its "OpenCRQ threat feed" live stream at start |
 | OpenCRQ | OpenAEV | `OPENAEV_ADMIN_TOKEN` | OpenCRQ connector reading the bulk snapshots (`BULK_SNAPSHOT_EXPORT` preview feature, enabled on OpenAEV) |
 | OpenAEV | OpenCRQ | `OPENCRQ_ADMIN_TOKEN` | Pivots and product switcher (`OPENAEV_XTM_OPENCRQ_*`) |
-| OpenCTI | OpenCRQ | none | Product switcher link (`XTM__OPENCRQ_URL`) |
+| OpenCTI | OpenCRQ | none | Product switcher link (`XTM__OPENCRQ_URL`, and `XTM__OPENGRC_URL` for releases up to 7.261119.0) |
 | OpenCTI worker and connectors, XTM Composer | OpenCTI | `OPENCTI_ADMIN_TOKEN` | Ingestion and connector management |
 | OpenAEV collectors and injectors, XTM Composer | OpenAEV | `OPENAEV_ADMIN_TOKEN` | Collection, injection and collector management |
 
@@ -81,23 +96,35 @@ The public URLs (`*_EXTERNAL_SCHEME`, `*_HOST`, `*_PORT`) are the identity each 
 
 ## Quick start
 
-Requirements: Docker Engine 20.10+ with Docker Compose v2, 16 GB of RAM at least (32 GB for production), 50 GB of free disk.
+Requirements:
+
+- Docker Engine 20.10+ with Docker Compose v2.20.2+, or Podman with podman-compose 1.6.0+
+- Minimum 16GB RAM (recommended 32GB for production)
+- At least 50GB available disk space
+- On a Mac with an Apple chip (or any ARM machine): Docker Desktop with **Use Rosetta for x86_64/amd64 emulation** on. XTM One is published for amd64 only and runs through emulation; the compose file pins its platform, so nothing else is needed.
 
 ```bash
 git clone https://github.com/FiligranHQ/xtm-docker.git && cd xtm-docker
-cp .env.sample .env      # replace every ChangeMe and changeme value, and every value marked [MANDATORY]
 sudo sysctl -w vm.max_map_count=262144   # Elasticsearch, on Linux hosts
-docker compose up -d
 ```
 
-Generate the secrets with:
+Create the configuration:
 
-| Value | Command |
-|---|---|
-| Admin tokens (`OPENCTI_ADMIN_TOKEN`, `OPENAEV_ADMIN_TOKEN`, `OPENCRQ_ADMIN_TOKEN`) | `uuidgen` (UUID v4) |
-| `OPENCTI_ENCRYPTION_KEY` | `openssl rand -base64 32` (not a UUID) |
-| `PLATFORM_REGISTRATION_TOKEN`, `XTM_ONE_SECRET_KEY` | `openssl rand -hex 32` |
-| Passwords | `openssl rand -hex 24` |
+```bash
+docker compose -f init.yml run --rm init
+```
+
+This creates `.env` from [.env.sample](.env.sample), with a random value for every password, key and token, the users of PostgreSQL and RabbitMQ, and mail sent to `localhost` until you set your SMTP server. It runs in a temporary Alpine container, so it needs nothing but Docker, on Linux, macOS and Windows. It prints the URLs and the admin passwords; every secret stays in `.env`, which only you can read. It never overwrites an existing `.env`.
+
+> **Your own values:** edit `.env` afterwards, before the first start, for your host names (`*_HOST`, `*_EXTERNAL_SCHEME`, `*_PORT`), your SMTP server or the admin emails. `OPENCTI_ENCRYPTION_KEY` is a 32-byte base64 key, not a UUID. `PLATFORM_REGISTRATION_TOKEN` is the shared secret that lets OpenCTI, OpenAEV and OpenCRQ register with XTM One: every platform of the stack uses the same value. The full XTM One configuration (admin credentials, the credentials of its PostgreSQL role, S3 bucket, license) lives at the bottom of `.env`.
+
+Start the stack:
+
+```bash
+docker compose up -d --pull always
+```
+
+`--pull always` downloads the images first, even if you have run the stack before: Docker Compose would otherwise start an older image kept locally under the same `latest` tag. `docker compose up -d` starts the whole XTM stack: XTM One, OpenCTI, OpenAEV, OpenCRQ, XTM Composer, the default connectors, collectors and injectors, and the shared services. Every module is part of the platform: none is optional.
 
 `PLATFORM_REGISTRATION_TOKEN` is the secret every product registers with XTM One: keep one value for the whole stack, and never the published default `xtm-default-registration-token`, with which XTM One registers no new platform and withholds the Filigran license from the products.
 
@@ -112,9 +139,9 @@ The first start takes several minutes: `docker compose ps` shows every service `
 | OpenAEV | http://localhost:8081 | `OPENAEV_ADMIN_EMAIL` / `OPENAEV_ADMIN_PASSWORD` |
 | OpenCRQ | http://localhost:8082 | XTM One, as `XTM_ONE_ADMIN_EMAIL` (XTM One's administrator is OpenCRQ's super administrator) |
 | RabbitMQ management | http://localhost:15672 | `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` |
-| Silo (S3) API | http://localhost:9000 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` |
+| RustFS (S3) API | http://localhost:9000 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` |
 
-The ports come from `XTM_ONE_PORT`, `OPENCTI_PORT`, `OPENCRQ_PORT` and `OPENAEV_PORT` in `.env`. The OpenAEV host port is also written in `docker-compose.yml` (`8081:8080`): change both together. Keep `XTM_ONE_ADMIN_EMAIL` equal to the admin email of the other products, so the users match between them.
+The ports come from `XTM_ONE_PORT`, `OPENCTI_PORT`, `OPENCRQ_PORT` and `OPENAEV_PORT` in `.env`. The OpenAEV and OpenCRQ host ports are also written in `modules/openaev.yml` (`8081:8080`) and `modules/opencrq.yml` (`8082:3002`): change both together. Keep `XTM_ONE_ADMIN_EMAIL` equal to the admin email of the other products, so the users match between them.
 
 ## Configuration
 
@@ -122,18 +149,22 @@ Every setting lives in [`.env.sample`](.env.sample), one block per component:
 
 | Block | Holds |
 |---|---|
-| `DEPENDENCIES` | Silo, RabbitMQ and PostgreSQL credentials, `ELASTIC_MEMORY_SIZE`, SMTP and IMAP |
+| `DEPENDENCIES` | RustFS, RabbitMQ and PostgreSQL credentials, `ELASTIC_MEMORY_SIZE`, SMTP and IMAP |
 | `COMMON` | `COMPOSE_PROJECT_NAME`, the XTM Composer id, `PLATFORM_REGISTRATION_TOKEN` |
 | `OPENCTI` | Public URL, admin account and token, health key, encryption key |
 | `OPENCTI CONNECTORS`, `OPENCTI DEFAULT DATA` | The connector ids |
 | `OPENAEV` | Public URL, admin account and token, health key, encryption key and salt, IMAP switch |
 | `OPENAEV COLLECTORS`, `OPENAEV INJECTORS` | The collector and injector ids, the optional NVD API key |
-| `XTM ONE` | Public URL, admin account, secret key, PostgreSQL role, S3 bucket, enterprise license, logs |
-| `OPENCRQ` | Public URL, admin token, PostgreSQL role, S3 bucket |
+| `XTM ONE` | Public URL, admin account, secret key, PostgreSQL role, S3 bucket, enterprise license, logs, the OpenSandbox switch and key |
+| `OPENCRQ` | Public URL, tenant of its connectors, admin token, PostgreSQL role, S3 bucket |
+
+**Existing deployments.** Updating a stack that ran MinIO or Silo: read [From MinIO or Silo](#from-minio-or-silo) first: its first steps run before the `git pull`.
+
+A `.env` made for an earlier version of this repository may still have a `COMPOSE_PROFILES` line that names modules, and `XTM_COMPOSER_OPENCTI_ENABLE` or `XTM_COMPOSER_OPENAEV_ENABLE`. They no longer do anything: the whole stack always starts, and XTM Composer always manages both platforms. Remove them from your `.env`. The only profile left is `opensandbox`: see [OpenSandbox](#opensandbox).
 
 **Memory.** Set `ELASTIC_MEMORY_SIZE` to `2G` on a 16 GB host, `4G` on 32 GB, `8G` on 64 GB and more.
 
-**Workers.** The OpenCTI `worker` service runs 3 replicas (`deploy.replicas` in `docker-compose.yml`); raise it for a higher ingestion throughput.
+**Workers.** The OpenCTI `worker` service runs 3 replicas (`deploy.replicas` in `modules/opencti.yml`); raise it for a higher ingestion throughput.
 
 **External access.** Behind a reverse proxy, set the public URL of each product; the calls inside the stack keep the service names:
 
@@ -144,13 +175,24 @@ OPENCTI_PORT=443
 # the same for OPENAEV_*, OPENCRQ_* and XTM_ONE_*
 ```
 
-**OpenCRQ.** Two one-shot services prepare its storage on each start: `opencrq-db-init` creates its role and database in `pgsql`, `opencrq-bucket-init` its bucket in Silo. OpenCRQ registers with XTM One and creates its initial tenant at its first start. Its limits in this stack:
+**OpenCRQ.** Two one-shot services prepare its storage on each start: `opencrq-db-init` creates its role and database in `pgsql`, and `opencrq-bucket-init` its bucket in RustFS. OpenCRQ registers with XTM One with `PLATFORM_REGISTRATION_TOKEN`. Its OpenCTI and OpenAEV connectors feed the tenant `OPENCRQ_TENANT_ID` names: see `.env.sample`. Its limits in this stack:
 
 - Its session cookie is `Secure`: over plain HTTP, browsers accept it on `localhost` only, so a remote OpenCRQ must be published over TLS (`OPENCRQ_EXTERNAL_SCHEME=https`).
 - The links it shows to OpenCTI and OpenAEV objects use the internal connector URLs (`http://opencti:8080`, `http://openaev:8080`).
 - `OPENCRQ_POSTGRES_USER` is set once: changed after the first start, the `opencrq` database and its tables stay owned by the old role.
 - It adds an HTTP and a worker process (heap capped at 512 MB and 4 GB) and about 50 PostgreSQL connections at peak to the `pgsql` instance.
-- The automatic threat feed stream and the admin token as a bearer need OpenCRQ `0.261122.0` or later, the version `docker-compose.yml` pins. On an older OpenCRQ, link a service account to the connectors in **Integrations** by hand; OpenAEV cannot call it.
+- The automatic threat feed stream and the admin token as a bearer need OpenCRQ `0.261122.0` or later; the stack runs `filigran/opencrq:latest`. On an older OpenCRQ, link a service account to the connectors in **Integrations** by hand; OpenAEV cannot call it.
+
+**OpenSandbox.** XTM One runs the code of its agents in a sandbox: custom tools, the code interpreter, and the checks and services an agent starts in a repository workspace. These features are off until an administrator turns them on in XTM One. Without OpenSandbox, custom tools and the code interpreter run their code in a restricted process of the XTM One containers (`XTM_ONE_CUSTOM_TOOL_SANDBOX=auto`), and the checks and services of a repository workspace do not run.
+
+The `opensandbox` profile adds the OpenSandbox server, which starts one isolated container per run. It is off by default: the server mounts the socket of the container engine to start those containers, which gives it control of every container of the host. To run it, set in `.env`:
+
+```bash
+COMPOSE_PROFILES=opensandbox
+XTM_ONE_CUSTOM_TOOL_SANDBOX=opensandbox
+```
+
+`OPENSANDBOX_API_KEY`, which `init-env.sh` draws, is the key XTM One sends to the server. Then run `docker compose up -d`: `opensandbox` starts, and `xtm-one` and `xtm-one-worker` are recreated with the new setting. The containers it starts run the published images `xtmone/sandbox-python` and `xtmone/sandbox-nodejs` (`XTM_ONE_OPENSANDBOX_IMAGES`), with no network access unless `XTM_ONE_OPENSANDBOX_NETWORK_ALLOW` lists domains. Under rootless Podman, set `CONTAINER_ENGINE_SOCKET` to the socket of Podman, such as `$XDG_RUNTIME_DIR/podman/podman.sock`.
 
 ## Included modules
 
@@ -184,6 +226,16 @@ docker compose up -d
 ```
 
 Read the release notes of each product before an upgrade, and compare your `.env` with [`.env.sample`](.env.sample): a new block needs its values before the first start of the new version (a deployment that predates OpenCRQ needs `OPENCRQ_ADMIN_TOKEN` and `OPENCRQ_POSTGRES_PASSWORD`, or `opencrq-db-init` fails and OpenCRQ does not start).
+
+### From MinIO or Silo
+
+The `minio` service runs [RustFS](https://rustfs.com), an open source (Apache 2.0) S3-compatible object storage. The service name, the `s3data` volume and the `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` variables keep their former names, so the OpenCTI, OpenAEV, OpenCRQ and XTM One settings do not change.
+
+RustFS does not start on an `s3data` volume written by MinIO or Silo (`Permission denied`: that volume belongs to root, RustFS runs as uid 10001). The volume (`xtm_s3data` with the project name of `.env.sample`) holds the buckets of OpenCTI, OpenAEV, OpenCRQ and XTM One. Back it up and move it with the migration guide listed in the [breaking changes of the OpenCTI documentation](https://docs.opencti.io/latest/deployment/breaking-changes/) (the [OpenAEV breaking changes](https://docs.openaev.io/latest/deployment/breaking-changes/) list the same move) before the next `docker compose up -d` with this compose file, then check a file in each platform. The guide's first steps run with the previous compose file: if you update this clone with `git pull`, run them before the pull.
+
+If your stack ran a `pgsql-xtm-one` container (separate PostgreSQL instances), follow [From separate PostgreSQL instances](#from-separate-postgresql-instances) too: dump the databases and back up the storage volume before the pull, and start the stack only once the databases are restored and the storage is moved.
+
+Started without moving the storage: `docker compose up -d` stops on the unhealthy `minio` service (`docker compose logs minio` shows `Permission denied`), and the data of the volume is unchanged. The guide explains how to go back to the previous storage service. If your stack ran a `pgsql-xtm-one` container, read the last paragraph of [Upgrade from separate PostgreSQL instances](#from-separate-postgresql-instances) before running `docker compose up -d` again.
 
 ### From separate PostgreSQL instances
 

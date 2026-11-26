@@ -1,0 +1,15 @@
+# Creates .env from .env.sample, before the first start, every secret drawn at random:
+#
+#   docker compose -f init.yml run --rm init
+#
+# A file of its own: the files of the stack need .env, which does not exist yet.
+# Nothing to install but Docker, on Linux, macOS and Windows.
+services:
+  init:
+    image: alpine:latest
+    network_mode: none
+    volumes:
+      - .:/xtm
+    working_dir: /xtm
+    # From a copy without carriage returns: a clone made on Windows works too.
+    entrypoint: ["sh", "-c", "tr -d '\\r' < init-env.sh | sh"]

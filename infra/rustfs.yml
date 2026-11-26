@@ -1,0 +1,27 @@
+services:
+
+  # RustFS, an open source (Apache 2.0) S3-compatible object storage. The service name, the
+  # s3data volume and the MINIO_ROOT_USER / MINIO_ROOT_PASSWORD variables keep their former
+  # names, so the settings of the platforms do not change. It does not start on a volume
+  # written by MinIO or Silo: see "Upgrade a stack that ran MinIO or Silo" in the README.
+  minio:
+    image: rustfs/rustfs:1.0.4
+    volumes:
+      - s3data:/data
+    ports:
+      - "9000:9000"
+    environment:
+      RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
+      RUSTFS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_OBS_LOG_DIRECTORY: "" # logs to stdout (docker logs) instead of files inside the container
+      RUSTFS_CHECK_UPDATE: "false" # no call to version.rustfs.com at each start
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  s3data:

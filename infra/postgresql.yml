@@ -1,0 +1,31 @@
+services:
+
+  pgsql:
+    # Shared by OpenAEV (openaev database), XTM One (xtm_one database, created by
+    # xtm-one-db-init) and OpenCRQ (opencrq database, created by opencrq-db-init). XTM One
+    # needs the pgvector extension.
+    image: pgvector/pgvector:pg17
+    # OpenAEV (up to 20 connections), XTM One (up to 35 per process, tracing pool
+    # included, over 2 web workers and its worker) and OpenCRQ (about 50 at peak)
+    # exceed the default of 100
+    command: ["postgres", "-c", "max_connections=200"]
+    # Parallel queries pass their tuples through /dev/shm: past the 64 MB a container
+    # gets by default, the OpenCRQ aggregates fail with "could not resize shared memory segment"
+    shm_size: 1gb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: openaev
+    volumes:
+      - pgsqlshareddata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      # Over TCP: on the first start, the temporary server that initialises the volume
+      # listens on the Unix socket only, and every client connects over TCP
+      test: [ "CMD", "pg_isready", "-h", "localhost", "-U", "${POSTGRES_USER}", "-d", "openaev" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgsqlshareddata:
