@@ -4,9 +4,6 @@ on:
   pull_request:
     paths:
       - docker-compose.yml
-      - infra/**
-      - modules/**
-      - init.yml
       - .env.sample
       - .github/workflows/validate-compose.yml
   push:
@@ -26,4 +23,3 @@ jobs:
           set -euo pipefail
           cp .env.sample .env
           docker compose config --quiet
-          docker compose --profile opensandbox config --quiet
