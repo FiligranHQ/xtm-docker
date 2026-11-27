@@ -1,8 +1,7 @@
 <a href="https://filigran.io"><img src="./.github/img/readme/banner.svg" width="100%" alt="XTM Platform for Docker by Filigran"></a>
 
 <p align="center">
-  <a href="https://github.com/FiligranHQ/xtm-docker/actions/workflows/validate-compose.yml"><img src="https://img.shields.io/github/actions/workflow/status/FiligranHQ/xtm-docker/validate-compose.yml?branch=main&label=compose&style=flat-square&labelColor=0A0C1C&logo=docker&logoColor=white&color=001BDA" alt="compose"></a>
-  <a href="https://github.com/FiligranHQ/xtm-docker/commits/main"><img src="https://img.shields.io/github/last-commit/FiligranHQ/xtm-docker/main?style=flat-square&labelColor=0A0C1C&color=001BDA" alt="last commit"></a>
+  <a href="https://github.com/FiligranHQ/xtm-docker/actions/workflows/validate-compose.yml"><img src="https://github.com/FiligranHQ/xtm-docker/actions/workflows/validate-compose.yml/badge.svg?branch=main" alt="compose"></a>
   <a href="https://docs.xtmone.io/latest/"><img src="https://img.shields.io/badge/docs-read-001BDA?style=flat-square&labelColor=0A0C1C" alt="docs"></a>
   <a href="https://community.filigran.io"><img src="https://img.shields.io/badge/community-slack-001BDA?style=flat-square&labelColor=0A0C1C&logo=slack&logoColor=white" alt="community"></a>
 </p>
